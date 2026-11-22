@@ -2352,10 +2352,11 @@
       const is7v7 = mode === 'classic7';
       const isOnline1v1 = mode === 'online1v1' && mp.active;
 
-      const customAiNames = ['肥康', '費高奧懷利', '般奴雲度斯', '旺財', '龜仔明', '咖喱仔'];
+      const homeAiNames = ['肥康', '費高奧懷利', '般奴雲度斯', '旺財', '龜仔明', '咖喱仔'];
+      const awayAiNames = ['懷斯', '雪糕仔', '大笨象', 'D朗', 'CN仔', '大石頭'];
 
       // Red Team (Host / Player 1 Team - Attacks Right ->)
-      const redPool = is7v7 ? customAiNames : pickShuffledNames(customAiNames, 6);
+      const redPool = is7v7 ? customAiNames : pickShuffledNames(homeAiNames, 6);
       const redNames = ['門神輝', playerProfile.name || '香港飛魚', ...redPool];
       let redFormation;
       if (isBeach) {
@@ -2420,7 +2421,7 @@
       });
 
       // Blue Team (CPU Opponent or Guest P2 in 1v1 Online Mode - Attacks Left <-)
-      const bluePool = is7v7 ? customAiNames : pickShuffledNames(customAiNames, 6);
+      const bluePool = is7v7 ? customAiNames : pickShuffledNames(awayAiNames, 6);
       const guestCustomName = isOnline1v1 ? (mp.opponentProfile.name || '藍隊挑戰者') : bluePool[0];
       const blueNames = ['鐵壁龍', ...(isOnline1v1 ? [guestCustomName, ...bluePool] : bluePool)];
       let blueFormation;
