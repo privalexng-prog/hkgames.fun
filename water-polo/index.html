@@ -2859,8 +2859,8 @@
         ty = passer.y;
       }
       if (passer.team === 'blue' && !mp.active) {
-        tx += (Math.random() - 0.5) * 75; // 藍隊AI傳波落點偏移（數字越大越易傳失）
-        ty += (Math.random() - 0.5) * 75;
+        tx += (Math.random() - 0.5) * 55; // 藍隊AI傳波落點偏移（數字越大越易傳失）
+        ty += (Math.random() - 0.5) * 55;
       }
 
       const dx = tx - ball.x;
@@ -2917,7 +2917,7 @@
       }
 
       let targetGoalY = Math.max(POOL.goalTop + 10, Math.min(POOL.goalBottom - 10, POOL.centerY + cornerBias));
-      if (shooter.team === 'blue' && !mp.active && Math.random() < 0.25) {
+      if (shooter.team === 'blue' && !mp.active && Math.random() < 0.15) {
         targetGoalY = POOL.centerY + (Math.random() < 0.5 ? -74 : 74); // 藍隊AI有 25% 機率射偏出界
       }
       const dx = targetGoalX - ball.x;
@@ -3801,7 +3801,7 @@
         let baseSpeed = p.isGK
           ? (isBlueCPU ? 85 : 113)
           : (ball.owner === p ? 139 : 150);
-        if (isBlueCPU && !mp.active) baseSpeed *= 0.82; // 藍隊AI整體游慢 18%（數字越細越慢）
+        if (isBlueCPU && !mp.active) baseSpeed *= 0.90; // 藍隊AI整體游慢 18%（數字越細越慢）
         const speed = isSprinting ? baseSpeed * 1.50 : baseSpeed;
         const targetVx = moveX * speed;
         const targetVy = moveY * speed;
@@ -3877,7 +3877,7 @@
           const timeToGoal = (p.x - ball.x) / ball.vx;
           if (timeToGoal > 0 && timeToGoal < 1.25) {
             p.gkReactTimer = (p.gkReactTimer || 0) + dt;
-            const reactionDelay = isBlueCPU ? 0.28 : 0.11; // 反應延遲加大（原本 0.14，越大越遲鈍）
+            const reactionDelay = isBlueCPU ? 0.20 : 0.11; // 反應延遲加大（原本 0.14，越大越遲鈍）
             if (p.gkReactTimer < reactionDelay) {
               return { mx: 0, my: 0, sprint: false };
             }
@@ -3971,7 +3971,7 @@
               const desiredCornerOffset = aimCornerY - POOL.centerY;
               p.y += Math.sign(desiredCornerOffset) * 3;
             }
-            const skipRate = (p.team === 'blue' && !mp.active) ? 0.22 : 0.68; // 藍隊AI得 22% 用彈水射（原本 0.68）
+            const skipRate = (p.team === 'blue' && !mp.active) ? 0.32 : 0.68; // 藍隊AI得 22% 用彈水射（原本 0.68）
             const useSkipShot = p.hasFireball || (distToGoal > 165 && Math.random() < skipRate);
             const charge = useSkipShot
               ? 0.90
@@ -4052,7 +4052,7 @@
             const isBehindCarrier = (ballCarrier.facing === 1 && p.x < ballCarrier.x - 10) ||
                                     (ballCarrier.facing === -1 && p.x > ballCarrier.x + 10);
             if (!isBehindCarrier && distToCarrier < 66 && p.state === 'swim' && ballCarrier.stealImmunityTimer <= 0) {
-              if (Math.random() < (p.team === 'blue' && !mp.active ? 0.04 : 0.11)) { // 飛撲頻率減低（原本 0.11）
+              if (Math.random() < (p.team === 'blue' && !mp.active ? 0.07 : 0.11)) { // 飛撲頻率減低（原本 0.11）
                 p.state = 'dive';
                 p.stateTimer = 0.28;
                 const ang = Math.atan2(ballCarrier.y - p.y, ballCarrier.x - p.x);
@@ -4144,7 +4144,7 @@
               } else if (tacklerSpeed > 135 && isFromBehind && Math.random() < 0.22) {
                 triggerOrdinaryFoul(carrier.x, carrier.y, carrier.team, '阻擋犯規！防守退開1米');
               } else if (tacklerSpeed > 100 || tackler.state === 'block' || tackler.state === 'dive') {
-                if (tackler.team === 'blue' && !mp.active && Math.random() < 0.40) {
+                if (tackler.team === 'blue' && !mp.active && Math.random() < 0.26) {
                   carrier.stealImmunityTimer = 0.5; // 藍隊AI有 40% 機率搶波失敗
                   return;
                 }
