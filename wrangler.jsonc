@@ -1,15 +1,18 @@
 {
-  // 👇 保留你原本已經有嘅設定（唔好刪走 LEADERBOARD_KV 同 assets）
   "name": "worker",
   "main": "worker.js",
-  "compatibility_date": "2026-11-01",
+  "compatibility_date": "2026-01-01",
+  "assets": {
+    "directory": "./",
+    "binding": "ASSETS"
+  },
   "kv_namespaces": [
     {
       "binding": "LEADERBOARD_KV",
-      "id": "保留你原本嘅KV_ID"
+      "id": "cbf8835c79da449fa3fb044acae5b1b6"
     }
-  ],
-
+  ]
+}
   // 👇 新增以下兩段（支援 Cloudflare 免費版 1v1 房間連線）
   "durable_objects": {
     "bindings": [
