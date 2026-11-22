@@ -77,14 +77,23 @@
     }
 
     .brand-tag {
-      background: var(--accent-gold);
-      color: #0b192c;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-size: 11px;
-      font-weight: 900;
-      box-shadow: 2px 2px 0 #8a5a00;
-    }
+  background: var(--accent-gold);
+  color: #0b192c;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: 2px 2px 0 #8a5a00;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.brand-tag:active {
+  transform: translateY(2px);
+  box-shadow: none;
+}
 
     .top-actions {
       display: flex;
@@ -893,7 +902,7 @@
     <!-- Top Retro Arcade Navigation Strip -->
     <header id="top-bar">
       <div class="brand-badge">
-        <span class="brand-tag">hkgames.fun</span>
+        <a href="https://hkgames.fun" class="brand-tag" title="返回 hkgames.fun">◀ hkgames.fun</a>
         <span>🤽 水球大亂鬥<span class="brand-title-text"> 16-BIT</span></span>
       </div>
       <div class="top-actions">
