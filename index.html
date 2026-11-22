@@ -502,7 +502,8 @@
       text-align: center;
     }
 
-    .game-card:hover .mtr-sign {
+    .game-card:hover .mtr-sign,
+    .game-card:hover .wp-sign {
       transform: scale(1.04);
     }
 
@@ -520,6 +521,37 @@
       font-weight: 700;
       letter-spacing: 1px;
       color: #facc15;
+    }
+
+    /* Pixel Water Polo Sign Overlay */
+    .wp-sign {
+      position: relative;
+      z-index: 2;
+      background: #0c4a6e;
+      border: 4px solid #facc15;
+      box-shadow:
+        inset 0 0 0 2px #0369a1,
+        4px 4px 0px rgba(0, 0, 0, 0.65);
+      padding: 10px 18px;
+      color: #ffffff;
+      text-align: center;
+    }
+
+    .wp-sign .zh {
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      display: block;
+      color: #facc15;
+      text-shadow: 2px 2px 0px #991b1b;
+    }
+
+    .wp-sign .en {
+      font-family: 'Silkscreen', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #7dd3fc;
     }
 
     /* Mystery Cartridge White Square with Black Question Mark */
@@ -773,7 +805,29 @@
       </div>
     </a>
 
-    <!-- GAME 2: MYSTERY SLOT ??? -->
+    <!-- GAME 2: WATER POLO RUMBLE -->
+    <a href="./water-polo/index.html" class="game-card" data-tags="playable">
+      <div class="thumb">
+        <canvas id="waterPoloCanvas" width="160" height="92"></canvas>
+        <span class="badge new">16-BIT • 有得玩</span>
+        <div class="wp-sign">
+          <span class="zh">水球大亂鬥</span>
+          <span class="en">WATER POLO RUMBLE</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-title">水球大亂鬥</div>
+        <p class="card-desc">
+          熱血 16-Bit 街機水球對決！中線衝波搶攻、高吊傳射同蓄滿力發動「彈水必殺射門」，支援 7v7 奧運賽、4v4 沙灘大亂鬥同 1v1 好友連機！
+        </p>
+        <div class="card-footer">
+          <span>街機運動 • 單人 / 1v1連機</span>
+          <span class="play-cta">START ▶</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- GAME 3: MYSTERY SLOT ??? -->
     <div class="game-card coming-soon" data-tags="soon" onclick="wiggleCard(this)">
       <div class="thumb">
         <canvas id="mysteryCanvas" width="160" height="92"></canvas>
@@ -925,79 +979,109 @@
         }
       }
 
-      // 2. Swimming Pool 16-Bit Pixel Art Scene
+      // 2. Tropical Beach Water Polo 16-Bit Pixel Art Scene
+      const wpCanvas = document.getElementById('waterPoloCanvas');
+      if (wpCanvas) {
+        const ctx = wpCanvas.getContext('2d');
+        const W = wpCanvas.width;
+        const H = wpCanvas.height;
+
+        // Tropical Sky & Pixel Sun (y = 0..24)
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(0, 0, W, 24);
+        ctx.fillStyle = '#7dd3fc';
+        ctx.fillRect(0, 16, W, 8);
+        // Sun
+        ctx.fillStyle = '#fde047';
+        ctx.fillRect(134, 4, 14, 14);
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(136, 6, 10, 10);
+
+        // Golden Sandy Beach & Palm Tree (y = 24..38)
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(0, 24, W, 14);
+        ctx.fillStyle = '#eab308';
+        for (let x = 4; x < W; x += 12) {
+          ctx.fillRect(x, 32, 4, 2);
+        }
+        // Pixel Palm Tree on Left Beach
+        ctx.fillStyle = '#92400e';
+        ctx.fillRect(12, 14, 4, 15);
+        ctx.fillRect(14, 10, 4, 6);
+        ctx.fillStyle = '#16a34a';
+        ctx.fillRect(4, 8, 10, 3);
+        ctx.fillRect(18, 8, 10, 3);
+        ctx.fillRect(7, 5, 16, 3);
+        ctx.fillStyle = '#4ade80';
+        ctx.fillRect(9, 6, 12, 2);
+
+        // Turquoise Tropical Ocean Court (y = 38..92)
+        ctx.fillStyle = '#06b6d4';
+        ctx.fillRect(0, 38, W, H - 38);
+        // Shore foam line
+        ctx.fillStyle = '#ffffff';
+        for (let x = 0; x < W; x += 8) {
+          ctx.fillRect(x, 38, 6, 2);
+        }
+
+        // Water ripples
+        ctx.fillStyle = '#67e8f9';
+        [[26, 48, 12], [118, 46, 14], [42, 78, 14], [108, 82, 12]].forEach(([rx, ry, rw]) => {
+          ctx.fillRect(rx, ry, rw, 2);
+        });
+
+        // Water Polo Goal Net on Right
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(140, 48, 14, 2);
+        ctx.fillRect(140, 74, 14, 2);
+        ctx.fillRect(152, 48, 2, 28);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+        for (let gy = 51; gy < 74; gy += 4) {
+          ctx.fillRect(142, gy, 10, 1);
+        }
+
+        // Red Cap Swimmer (Left, throwing water polo ball)
+        ctx.fillStyle = '#e09f67';
+        ctx.fillRect(36, 56, 8, 7);
+        ctx.fillRect(44, 54, 4, 6);
+        ctx.fillStyle = '#ef233c';
+        ctx.fillRect(36, 54, 8, 3);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(32, 63, 14, 2);
+
+        // Yellow Water Polo Ball flying mid-air
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(66, 48, 6, 6);
+        ctx.fillStyle = '#1e3a8a';
+        ctx.fillRect(68, 49, 2, 4);
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(58, 50, 5, 2);
+
+        // Blue Cap Defender / Goalkeeper (Right)
+        ctx.fillStyle = '#f1b980';
+        ctx.fillRect(126, 58, 8, 7);
+        ctx.fillStyle = '#2563eb';
+        ctx.fillRect(126, 56, 8, 3);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(122, 65, 14, 2);
+      }
+
+      // 3. Mystery Locked Cartridge Pixel Art Scene
       const mysCanvas = document.getElementById('mysteryCanvas');
       if (mysCanvas) {
         const ctx = mysCanvas.getContext('2d');
         const W = mysCanvas.width;
         const H = mysCanvas.height;
 
-        // Poolside tiled deck at the top (y = 0..12)
-        ctx.fillStyle = '#e2e8f0';
-        ctx.fillRect(0, 0, W, 12);
-        ctx.fillStyle = '#94a3b8';
-        ctx.fillRect(0, 6, W, 1);
-        for (let x = 0; x < W; x += 16) {
-          ctx.fillRect(x, 0, 1, 12);
-        }
+        ctx.fillStyle = '#1e1b2e';
+        ctx.fillRect(0, 0, W, H);
 
-        // Pool coping stone edge & water shadow lip (y = 12..16)
-        ctx.fillStyle = '#64748b';
-        ctx.fillRect(0, 12, W, 2);
-        ctx.fillStyle = '#0e7490';
-        ctx.fillRect(0, 14, W, 2);
-
-        // Bright 16-bit turquoise pool water (y = 16..92)
-        ctx.fillStyle = '#06b6d4';
-        ctx.fillRect(0, 16, W, H - 16);
-
-        // Underwater ceramic tile grid lines
-        ctx.fillStyle = '#0891b2';
-        for (let y = 26; y < H; y += 12) {
-          ctx.fillRect(0, y, W, 1);
-        }
-        for (let x = 8; x < W; x += 16) {
-          ctx.fillRect(x, 16, 1, H - 16);
-        }
-
-        // Water shimmer & pixel ripples
-        const ripples = [
-          [10, 22, 10], [46, 20, 8], [116, 23, 12], [142, 30, 8],
-          [16, 48, 12], [124, 50, 10], [28, 60, 8], [134, 62, 10],
-          [12, 80, 14], [52, 83, 10], [104, 81, 12], [138, 85, 10]
-        ];
-        ripples.forEach(([rx, ry, rw]) => {
-          ctx.fillStyle = '#67e8f9';
-          ctx.fillRect(rx, ry, rw, 2);
-          ctx.fillStyle = '#cffafe';
-          ctx.fillRect(rx + 2, ry, Math.max(2, rw - 5), 1);
-        });
-
-        // Floating swimming lane ropes (水線)
-        const drawLaneRope = (ly) => {
-          // Rope shadow in water
-          ctx.fillStyle = '#0e7490';
-          ctx.fillRect(0, ly + 3, W, 1);
-
-          for (let x = 0; x < W; x += 4) {
-            const idx = Math.floor(x / 4) % 4;
-            ctx.fillStyle = idx === 0 ? '#ef4444' : idx === 2 ? '#1d4ed8' : '#ffffff';
-            ctx.fillRect(x, ly, 3, 3);
+        for (let y = 0; y < H; y += 8) {
+          for (let x = 0; x < W; x += 8) {
+            ctx.fillStyle = ((x + y) / 8) % 2 === 0 ? '#27233a' : '#181526';
+            ctx.fillRect(x, y, 7, 7);
           }
-        };
-        drawLaneRope(36);
-        drawLaneRope(72);
-
-        // Stainless steel pool ladder on top-left
-        ctx.fillStyle = '#475569';
-        ctx.fillRect(17, 4, 2, 19);
-        ctx.fillRect(27, 4, 2, 19);
-        ctx.fillStyle = '#f8fafc';
-        ctx.fillRect(16, 4, 2, 18);
-        ctx.fillRect(26, 4, 2, 18);
-        // Ladder rungs
-        ctx.fillRect(18, 11, 8, 2);
-        ctx.fillRect(18, 17, 8, 2);
+        }
       }
     })();
   </script>
