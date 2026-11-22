@@ -77,23 +77,23 @@
     }
 
     .brand-tag {
-  background: var(--accent-gold);
-  color: #0b192c;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 11px;
-  font-weight: 900;
-  box-shadow: 2px 2px 0 #8a5a00;
-  text-decoration: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-}
+      background: var(--accent-gold);
+      color: #0b192c;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 900;
+      box-shadow: 2px 2px 0 #8a5a00;
+      text-decoration: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+    }
 
-.brand-tag:active {
-  transform: translateY(2px);
-  box-shadow: none;
-}
+    .brand-tag:active {
+      transform: translateY(2px);
+      box-shadow: none;
+    }
 
     .top-actions {
       display: flex;
@@ -895,6 +895,21 @@
       background: #d97706;
       border-color: #ffd541;
     }
+
+    .mp-submode-btn {
+      background: #0c2340;
+      border-color: #335c8d;
+      color: #cbd5e1;
+      padding: 7px 4px;
+      font-size: 11px;
+    }
+
+    .mp-submode-btn.selected {
+      background: #d97706;
+      border-color: #ffd541;
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(255, 213, 65, 0.45);
+    }
   </style>
 </head>
 <body>
@@ -1041,7 +1056,7 @@
                   <span class="mode-badge" style="background:#10b981;">1v1 連線</span>
                 </div>
                 <div class="mode-desc">
-                  輸入 4 位房間編號與好友即時連線對決！房主控紅隊、加入者控藍隊，Cloudflare 邊緣低延遲同步！
+                  輸入 4 位房間編號與好友即時連線對決！可自由選擇 7v7 / 5v5 / 4v4 賽制，房主控紅隊、加入者控藍隊！
                 </div>
               </div>
 
@@ -1168,6 +1183,16 @@
           <span id="mp-ping-text" style="color:#7ee8fa;font-weight:bold;">PING: --</span>
         </div>
 
+        <!-- Sub-Mode Selector for 1v1 Online Room -->
+        <div class="mp-lobby-box" style="margin-top:0;margin-bottom:10px;padding:10px;">
+          <div style="font-size:12px;color:#7ee8fa;font-weight:bold;margin-bottom:6px;">🏆 選擇房間對戰賽制（7v7 / 5v5 / 4v4）：</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;" id="mp-submode-group">
+            <button type="button" class="mp-mini-action mp-submode-btn selected" data-submode="classic7">🏅 7v7 奧運</button>
+            <button type="button" class="mp-mini-action mp-submode-btn" data-submode="classic5">⚡ 5v5 經典</button>
+            <button type="button" class="mp-mini-action mp-submode-btn" data-submode="beach">🏖️ 4v4 沙灘</button>
+          </div>
+        </div>
+
         <!-- Step 1: Create Room -->
         <div class="mp-lobby-box" style="margin-top:0;margin-bottom:10px;">
           <div style="font-size:12px;color:#ffd541;font-weight:bold;margin-bottom:6px;">🏠 方法一：建立新房間（你將控制 紅隊）</div>
@@ -1176,7 +1201,7 @@
             <button id="btn-mp-create" class="mp-mini-action gold">產生房號</button>
             <button id="btn-mp-copy" class="mp-mini-action">複製</button>
           </div>
-          <div style="font-size:11px;color:#93c5fd;">將 4 位房間編號傳給好友，好友輸入後即自動開波！</div>
+          <div style="font-size:11px;color:#93c5fd;">將 4 位房間編號傳給好友，好友輸入後即可開波！</div>
         </div>
 
         <!-- Step 2: Join Room -->
@@ -1188,7 +1213,7 @@
           </div>
         </div>
 
-        <!-- Optional Cloudflare Worker Endpoint Config & Offline Same-Browser Test -->
+        <!-- Optional Cloudflare Worker Endpoint Config -->
         <details style="font-size:11px;color:#94a3b8;margin-bottom:10px;">
           <summary style="cursor:pointer;color:#7ee8fa;font-weight:bold;">⚙️ Cloudflare Worker 伺服器網址設定（進階）</summary>
           <div style="margin-top:6px;">
@@ -1209,10 +1234,6 @@
      * ============================================================================
      * 水球大亂鬥 (WATER POLO RUMBLE 16-BIT) - HD PIXEL EDITION (1120x630)
      * Complete Single-File 16-Bit Retro Arcade Engine
-     * - 1120x630 Crisp 2x Pixel Art & Sharp Outlined Traditional Chinese Typography
-     * - Web Audio API 16-Bit Chiptune BGM & SFX Synthesizer (including Goalpost Clang)
-     * - Swim-Off Center Sprint, 3-Tier Water Polo Foul & Penalty System (Ordinary,
-     *   15s Sin Bin Exclusion, 5-Meter 1v1 Penalty Shot), Input Cooldowns & Buffers
      * ============================================================================
      */
 
@@ -1225,7 +1246,7 @@
         this.enabled = true;
         this.bgmTimer = null;
         this.bgmStep = 0;
-        this.bgmMode = 'menu'; // 'menu' | 'match' | 'urgent' | 'none'
+        this.bgmMode = 'menu';
       }
 
       init() {
@@ -1340,7 +1361,6 @@
         this.playNoise(0.16, 0.11, 1200);
       }
 
-      // Metallic Goalpost / Crossbar Clang!
       sfxPostHit() {
         this.playTone(980, 0.28, 'triangle', 0.14, 720);
         this.playTone(1480, 0.22, 'square', 0.07, 1120);
@@ -1559,14 +1579,13 @@
     // ============================================================================
     // 3. HD 2X PIXEL ART & CRISP OUTLINED TYPOGRAPHY HELPERS
     // ============================================================================
-    const PX_SCALE = 2; // 2x integer pixel scaling for 1120x630 HD retro canvas
+    const PX_SCALE = 2;
 
     function drawPixelRect(ctx, x, y, w, h, color) {
       ctx.fillStyle = color;
       ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
     }
 
-    // Helper for crisp, outlined Traditional Chinese / Arcade text on HD Canvas
     function drawOutlinedText(ctx, text, x, y, fontSize, fillColor, strokeColor = '#061324', strokeWidth = 3, align = 'center') {
       ctx.save();
       ctx.font = `900 ${fontSize}px 'Noto Sans TC', 'PingFang HK', 'Microsoft JhengHei', sans-serif`;
@@ -1581,11 +1600,6 @@
       ctx.restore();
     }
 
-    /**
-     * Renders a 2x Scaled 16-bit Water Polo Swimmer with paper-doll customization,
-     * water ripples, treading water bobbing, raised arms (block/celebrate/dive),
-     * cooldown gauge, sin bin timer, and dizzy stars!
-     */
     function drawSwimmerSprite(ctx, opts) {
       const {
         x, y,
@@ -1595,7 +1609,7 @@
         custom = null,
         animTime = 0,
         swimSpeed = 0,
-        state = 'swim', // 'swim' | 'block' | 'celebrate' | 'sink' | 'dizzy' | 'dive'
+        state = 'swim',
         celebType = 0,
         stamina = 100,
         maxStamina = 100,
@@ -1609,7 +1623,6 @@
       const px = Math.round(x);
       const py = Math.round(y);
 
-      // Resolve appearance colors
       const skinObj = custom ? CUSTOM_OPTIONS.skin[custom.skin] : (team === 'red' ? CUSTOM_OPTIONS.skin[0] : CUSTOM_OPTIONS.skin[2]);
       const hairObj = custom ? CUSTOM_OPTIONS.hair[custom.hair] : (team === 'red' ? CUSTOM_OPTIONS.hair[0] : CUSTOM_OPTIONS.hair[1]);
       const capStyleId = custom ? CUSTOM_OPTIONS.capStyle[custom.capStyle].id : 'classic';
@@ -1643,7 +1656,6 @@
         ctx.globalAlpha = 0.85;
       }
 
-      // 1. Water Surface Ripples around swimmer
       const ripplePhase = (animTime * 2.2) % 1;
       ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - ripplePhase) * 0.55})`;
       ctx.lineWidth = 2;
@@ -1651,13 +1663,11 @@
       ctx.ellipse(px, py + 4 * S, (8 + ripplePhase * 7) * S, (3 + ripplePhase * 3) * S, 0, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Wake trail when swimming fast
       if (swimSpeed > 90 && (state === 'swim' || state === 'dive')) {
         drawPixelRect(ctx, px - facing * 10 * S, py + 2 * S, 4 * S, 2 * S, 'rgba(255,255,255,0.75)');
         drawPixelRect(ctx, px - facing * 14 * S, py + 4 * S, 3 * S, 1 * S, 'rgba(255,255,255,0.45)');
       }
 
-      // Controlled P1 Marker Ring under player
       if (isControlled) {
         const pulseR = 10 * S + Math.sin(animTime * 8) * 2;
         ctx.strokeStyle = '#ffd541';
@@ -1667,7 +1677,6 @@
         ctx.stroke();
       }
 
-      // Special Celebration Pose 2: Giant Inflatable Yellow Duckie Spin!
       if (state === 'celebrate' && celebType === 1) {
         const spinDir = Math.cos(animTime * 8) >= 0 ? 1 : -1;
         drawPixelRect(ctx, px - 11 * S, py - 2 * S + bob, 22 * S, 7 * S, '#facc15');
@@ -1677,7 +1686,6 @@
         drawPixelRect(ctx, px + spinDir * 8 * S, py - 7 * S + bob, 1 * S, 1 * S, '#000000');
       }
 
-      // Special Celebration Pose 3: Synchronized Swimming Upside-Down Legs!
       if (state === 'celebrate' && celebType === 2) {
         const split = Math.sin(animTime * 10) * 4 * S;
         drawPixelRect(ctx, px - 5 * S, py - 4 * S, 10 * S, 5 * S, trunksObj.main);
@@ -1689,7 +1697,6 @@
         return;
       }
 
-      // Sinking Goalkeeper (after conceding goal)
       if (state === 'sink') {
         const sinkY = py + 4 * S;
         drawPixelRect(ctx, px - 6 * S, sinkY - 3 * S, 12 * S, 4 * S, capMain);
@@ -1701,14 +1708,12 @@
         return;
       }
 
-      // Elevation offset when jumping out of water
       let jumpY = 0;
       if (state === 'block') jumpY = -9 * S;
       if (state === 'celebrate' && celebType === 0) jumpY = (-8 + Math.sin(animTime * 12) * 2) * S;
 
       const bodyY = py + bob + jumpY;
 
-      // 2. Torso & Swim Trunks
       if (jumpY < -3 * S) {
         drawPixelRect(ctx, px - 6 * S, bodyY - 3 * S, 12 * S, 7 * S, skinObj.base);
         drawPixelRect(ctx, px - 6 * S, bodyY + 1 * S, 2 * S, 3 * S, skinObj.shade);
@@ -1720,14 +1725,12 @@
         drawPixelRect(ctx, px - 6 * S, bodyY + 1 * S, 12 * S, 2 * S, skinObj.shade);
       }
 
-      // 3. Arms (Swim, Block, Dive Reach, or Muscle Flex)
       if (state === 'block') {
         drawPixelRect(ctx, px - 7 * S, bodyY - 17 * S, 3 * S, 14 * S, skinObj.base);
         drawPixelRect(ctx, px + 4 * S, bodyY - 17 * S, 3 * S, 14 * S, skinObj.base);
         drawPixelRect(ctx, px - 8 * S, bodyY - 19 * S, 4 * S, 3 * S, skinObj.shade);
         drawPixelRect(ctx, px + 4 * S, bodyY - 19 * S, 4 * S, 3 * S, skinObj.shade);
       } else if (state === 'dive') {
-        // Outstretched diving arm reaching for Swim-Off ball!
         drawPixelRect(ctx, px + facing * 5 * S, bodyY - 5 * S, 10 * S, 3 * S, skinObj.base);
         drawPixelRect(ctx, px + facing * 14 * S, bodyY - 6 * S, 3 * S, 4 * S, skinObj.shade);
       } else if (state === 'celebrate' && celebType === 0) {
@@ -1742,12 +1745,10 @@
         drawPixelRect(ctx, armX - 2 * S, armY, 4 * S, 4 * S, skinObj.base);
       }
 
-      // 4. Head
       const headY = bodyY - 10 * S;
       drawPixelRect(ctx, px - 5 * S, headY, 10 * S, 8 * S, skinObj.base);
       drawPixelRect(ctx, px - facing * 4 * S, headY + 4 * S, 3 * S, 4 * S, skinObj.shade);
 
-      // Hair peek
       if (hairObj.id === 'spiky') {
         drawPixelRect(ctx, px + facing * 2 * S, headY - 1 * S, 3 * S, 2 * S, hairObj.color);
       } else if (hairObj.id === 'afro') {
@@ -1757,7 +1758,6 @@
         drawPixelRect(ctx, px - facing * 7 * S, headY + 1 * S, 3 * S, 5 * S, hairObj.color);
       }
 
-      // 5. Swim Cap & Ear Guards
       drawPixelRect(ctx, px - 5 * S, headY - 2 * S, 10 * S, 4 * S, capMain);
       drawPixelRect(ctx, px - 5 * S, headY - 2 * S, 10 * S, 1 * S, capTrim);
       drawPixelRect(ctx, px - facing * 2 * S - 1 * S, headY + 1 * S, 3 * S, 4 * S, capDark);
@@ -1778,7 +1778,6 @@
         drawPixelRect(ctx, px + 2 * S, headY - 6 * S, 2 * S, 1 * S, '#38bdf8');
       }
 
-      // 6. Eyes & Eye Accessories
       const eyeX = px + facing * 2 * S;
       const eyeY = headY + 3 * S;
       if (state === 'dizzy') {
@@ -1803,12 +1802,10 @@
         drawPixelRect(ctx, eyeX, eyeY, 2 * S, 2 * S, '#111827');
       }
 
-      // 7. White Water Foam Collar around chest
       if (jumpY >= -3 * S) {
         drawPixelRect(ctx, px - 7 * S, py + 2 * S, 14 * S, 2 * S, 'rgba(255,255,255,0.85)');
       }
 
-      // 8. Stamina Bar & Block Cooldown Indicator for Controlled Player
       if (isControlled) {
         const barW = 44;
         const pct = Math.max(0, Math.min(1, stamina / maxStamina));
@@ -1816,7 +1813,6 @@
         const barColor = pct > 0.35 ? '#38bdf8' : '#f43f5e';
         drawPixelRect(ctx, px - barW / 2, py + 17, Math.round(barW * pct), 3, barColor);
 
-        // Clean Cooldown Recovery Indicator when Shot Block is recharging
         if (blockCooldown > 0) {
           const cdPct = Math.max(0, Math.min(1, 1 - blockCooldown / 0.45));
           drawPixelRect(ctx, px - barW / 2 - 2, py + 24, barW + 4, 5, '#091526');
@@ -1824,7 +1820,6 @@
         }
       }
 
-      // 9. Sin Bin Exclusion Countdown or Player Overhead Name (16px Crisp Outlined Font)
       const tagY = headY - (capStyleId === 'shark' || capStyleId === 'crown' ? 18 : 10);
       if (sinBinTimer > 0) {
         drawOutlinedText(ctx, `🟥 罰時 ${Math.ceil(sinBinTimer)}s`, px, tagY, 16, '#ff4b5c', '#061324', 3);
@@ -1841,7 +1836,6 @@
     const LOGICAL_W = 1120;
     const LOGICAL_H = 630;
 
-    // Pool Playing Area Boundaries (2x HD Coordinates)
     const POOL = {
       left: 128,
       right: 992,
@@ -1854,8 +1848,8 @@
       goalTop: 304,
       goalBottom: 416,
       goalDepth: 36,
-      twoMeterDist: 68,   // 34px * 2
-      fiveMeterDist: 136  // 68px * 2
+      twoMeterDist: 68,
+      fiveMeterDist: 136
     };
 
     const canvas = document.getElementById('gameCanvas');
@@ -1866,7 +1860,6 @@
     const pCtx = previewCanvas.getContext('2d');
     pCtx.imageSmoothingEnabled = false;
 
-    // Input State & Cooldowns
     const keys = {
       up: false,
       down: false,
@@ -1887,10 +1880,10 @@
       requireButtonRelease: false
     };
 
-    // Match State
     const game = {
-      screen: 'menu', // 'menu' | 'countdown' | 'playing' | 'period_break' | 'penalty_shot' | 'goal_celeb' | 'summary'
-      mode: 'classic7', // 'classic7' | 'classic5' | 'beach' | 'online1v1'
+      screen: 'menu',
+      mode: 'classic7',
+      effectiveRules: 'classic7', // 'classic7' | 'classic5' | 'beach'
       time: 0,
       period: 1,
       maxPeriods: 2,
@@ -1919,7 +1912,6 @@
         skipBounced: false,
         trail: []
       },
-      // Countdown, Period Break & Swim-Off State
       countdownTimer: 0,
       countdownLastBeep: 4,
       breakTimer: 0,
@@ -1927,7 +1919,6 @@
       isSwimOff: false,
       swimOffActive: false,
       nextKickoffTeam: 'red',
-      // 5-Meter Penalty Shot State
       penaltyState: {
         active: false,
         shooter: null,
@@ -1937,7 +1928,6 @@
         aiShootTimer: 1.4,
         shotTaken: false
       },
-      // Visual Effects & Stadium Props
       ripples: [],
       splashes: [],
       confetti: [],
@@ -1948,22 +1938,19 @@
         y: POOL.top - 28,
         targetX: POOL.centerX,
         whistleTimer: 0,
-        gesture: 'run', // 'run' | 'whistle' | 'goal' | 'red_flag' | 'penalty'
+        gesture: 'run',
         flagColor: '#ffffff'
       },
       spectators: [],
-      // Goal Celebration State
       celebTimer: 0,
       slowMoTimer: 0,
       lastScorer: null,
       lastConcedingGK: null,
       goalBannerText: '',
-      // Beach Mode Chaos Entities
       beachWave: { active: false, x: 0, dir: 1, timer: 8 },
       beachBall: { active: false, x: 560, y: 360, vx: 44, vy: 32, r: 24 },
       powerups: [],
       powerupSpawnTimer: 5,
-      // Player Match Stats
       stats: {
         goals: 0,
         blocks: 0,
@@ -1974,14 +1961,13 @@
 
     // ============================================================================
     // 4B. CLOUDFLARE WORKERS + DURABLE OBJECTS 1V1 MULTIPLAYER CLIENT ENGINE
-    //     - Host ('red') runs authoritative physics & broadcasts 20Hz state snapshots
-    //     - Guest ('blue') sends real-time input packets & receives state interpolation
     // ============================================================================
     const mp = {
       active: false,
       ws: null,
       roomCode: '',
-      role: 'host', // 'host' (controls Red Team) | 'guest' (controls Blue Team)
+      role: 'host',
+      subMode: 'classic7', // 'classic7' | 'classic5' | 'beach'
       opponentConnected: false,
       opponentProfile: {
         name: '藍隊挑戰者',
@@ -2008,15 +1994,39 @@
       blueControlledPlayer: null,
       syncTimer: 0,
       pingTimer: 0,
-      pingMs: 0,
-      reconnectAttempts: 0
+      pingMs: 0
     };
+
+    function getSubModeLabel(subMode) {
+      if (subMode === 'beach') return '🏖️ 4v4 沙灘模式';
+      if (subMode === 'classic5') return '⚡ 5v5 經典模式';
+      return '🏅 7v7 奧運模式';
+    }
+
+    function setMpSubMode(subMode, broadcast = true) {
+      const valid = ['classic7', 'classic5', 'beach'].includes(subMode) ? subMode : 'classic7';
+      mp.subMode = valid;
+      document.querySelectorAll('.mp-submode-btn').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.submode === valid);
+      });
+      if (broadcast && mp.active && mp.role === 'host') {
+        sendMpMessage({ type: 'room_config', subMode: valid });
+      }
+    }
 
     function getCloudflareWsUrl(roomCode) {
       const customInput = document.getElementById('mp-worker-url')?.value.trim();
       if (customInput) {
-        const base = customInput.replace(/\/+$/, '');
+        let base = customInput.replace(/\/+$/, '');
+        base = base.replace(/^https:\/\//i, 'wss://').replace(/^http:\/\//i, 'ws://');
+        if (!/^wss?:\/\//i.test(base)) {
+          base = `wss://${base}`;
+        }
+        base = base.replace(/\/ws\/room\/[A-Za-z0-9]+$/i, '');
         return `${base}/ws/room/${roomCode}`;
+      }
+      if (window.location.protocol === 'file:') {
+        return '';
       }
       const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       return `${proto}//${window.location.host}/ws/room/${roomCode}`;
@@ -2056,6 +2066,11 @@
       mp.active = true;
 
       const wsUrl = getCloudflareWsUrl(mp.roomCode);
+      if (!wsUrl) {
+        mp.active = false;
+        setMpLobbyStatus('本機檔案模式請在下方輸入 Cloudflare Worker 網址 (wss://...)', 'err');
+        return;
+      }
       setMpLobbyStatus(`正在連接房間 #${mp.roomCode} ...`, 'wait');
 
       try {
@@ -2063,20 +2078,23 @@
         mp.ws = ws;
 
         ws.onopen = () => {
+          if (mp.ws !== ws) return;
           setMpLobbyStatus(
             role === 'host'
-              ? `房間 #${mp.roomCode} 已建立！等待好友加入...`
+              ? `房間 #${mp.roomCode} 已建立（${getSubModeLabel(mp.subMode)}）！等待好友加入...`
               : `已進入房間 #${mp.roomCode}！等待房主開波...`,
             'ok'
           );
           sendMpMessage({
             type: 'hello',
             role: mp.role,
+            subMode: mp.subMode,
             profile: { ...playerProfile, name: document.getElementById('player-name-input').value.trim() || '香港飛魚' }
           });
         };
 
         ws.onmessage = event => {
+          if (mp.ws !== ws) return;
           let msg;
           try {
             msg = JSON.parse(event.data);
@@ -2087,17 +2105,20 @@
         };
 
         ws.onerror = () => {
-          setMpLobbyStatus(`無法連上 Cloudflare Worker（請檢查網址或部署狀態）`, 'err');
+          if (mp.ws !== ws) return;
+          setMpLobbyStatus(`無法連上 Cloudflare Worker（請檢查網址或 Durable Objects 綁定）`, 'err');
         };
 
         ws.onclose = () => {
+          if (mp.ws !== ws) return;
           if (mp.active) {
             setMpLobbyStatus(`房間 #${mp.roomCode} 連線已中斷`, 'err');
             mp.opponentConnected = false;
           }
         };
       } catch (err) {
-        setMpLobbyStatus('瀏覽器不支援 WebSocket 或網址格式錯誤', 'err');
+        mp.active = false;
+        setMpLobbyStatus(`WebSocket 連線失敗：${err && err.message ? err.message : '網址格式錯誤'}`, 'err');
       }
     }
 
@@ -2114,14 +2135,17 @@
         if (msg.profile) {
           mp.opponentProfile = { ...mp.opponentProfile, ...msg.profile };
         }
+        if (msg.subMode && mp.role === 'guest') {
+          setMpSubMode(msg.subMode, false);
+        }
         mp.opponentConnected = true;
         audio.sfxPowerup();
-        setMpLobbyStatus(`✅ 對手【${mp.opponentProfile.name}】已連線！(房號 #${mp.roomCode})`, 'ok');
+        setMpLobbyStatus(`✅ 對手【${mp.opponentProfile.name}】已連線！(${getSubModeLabel(mp.subMode)})`, 'ok');
 
         if (mp.role === 'host') {
-          // Echo host profile back so guest sees host's custom character
           sendMpMessage({
             type: 'host_ready',
+            subMode: mp.subMode,
             profile: { ...playerProfile, name: document.getElementById('player-name-input').value.trim() || '香港飛魚' }
           });
           document.getElementById('btn-mp-start-now').classList.remove('hidden');
@@ -2130,8 +2154,17 @@
         if (msg.profile) {
           mp.opponentProfile = { ...mp.opponentProfile, ...msg.profile };
         }
+        if (msg.subMode) {
+          setMpSubMode(msg.subMode, false);
+        }
         mp.opponentConnected = true;
-        setMpLobbyStatus(`✅ 已配對房主【${mp.opponentProfile.name}】！準備開波...`, 'ok');
+        setMpLobbyStatus(`✅ 已配對房主【${mp.opponentProfile.name}】(${getSubModeLabel(mp.subMode)})！等待開波...`, 'ok');
+      } else if (msg.type === 'room_config') {
+        if (msg.subMode) {
+          setMpSubMode(msg.subMode, false);
+          setMpLobbyStatus(`🏆 房間賽制已切換為：${getSubModeLabel(mp.subMode)}`, 'ok');
+          audio.sfxClick();
+        }
       } else if (msg.type === 'peer_left') {
         mp.opponentConnected = false;
         setMpLobbyStatus(`⚠️ 對手已離開房間 #${mp.roomCode}`, 'err');
@@ -2143,16 +2176,16 @@
         const pingEl = document.getElementById('mp-ping-text');
         if (pingEl) pingEl.textContent = `PING: ${mp.pingMs}ms`;
       } else if (msg.type === 'start_match') {
-        // Guest receives start signal from Host
+        if (msg.subMode) {
+          setMpSubMode(msg.subMode, false);
+        }
         document.getElementById('mp-modal').classList.add('hidden');
         startMatch('online1v1', true);
       } else if (msg.type === 'input' && mp.role === 'host') {
-        // Host receives Guest's real-time keypad/joystick state
         if (msg.keys) {
           mp.remoteKeys = { ...mp.remoteKeys, ...msg.keys };
         }
       } else if (msg.type === 'state' && mp.role === 'guest') {
-        // Guest applies authoritative snapshot from Host
         applyAuthoritativeSnapshot(msg.state);
       }
     }
@@ -2160,6 +2193,7 @@
     function buildAuthoritativeSnapshot() {
       return {
         screen: game.screen,
+        effectiveRules: game.effectiveRules,
         period: game.period,
         periodTime: game.periodTime,
         shotClock: game.shotClock,
@@ -2198,7 +2232,10 @@
           celebType: p.celebType,
           stamina: Math.round(p.stamina),
           blockCooldown: Number(p.blockCooldown.toFixed(2)),
-          sinBinTimer: Number(p.sinBinTimer.toFixed(1))
+          sinBinTimer: Number(p.sinBinTimer.toFixed(1)),
+          goals: p.goals,
+          blocks: p.blocks,
+          steals: p.steals
         }))
       };
     }
@@ -2207,6 +2244,7 @@
       if (!snap) return;
       const prevScreen = game.screen;
       game.screen = snap.screen;
+      if (snap.effectiveRules) game.effectiveRules = snap.effectiveRules;
       game.period = snap.period;
       game.periodTime = snap.periodTime;
       game.shotClock = snap.shotClock;
@@ -2259,6 +2297,9 @@
           p.stamina = sp.stamina;
           p.blockCooldown = sp.blockCooldown;
           p.sinBinTimer = sp.sinBinTimer;
+          if (typeof sp.goals === 'number') p.goals = sp.goals;
+          if (typeof sp.blocks === 'number') p.blocks = sp.blocks;
+          if (typeof sp.steals === 'number') p.steals = sp.steals;
         });
       }
 
@@ -2273,7 +2314,6 @@
       }
     }
 
-    // Initialize 16-bit Bleacher Spectators (2x HD spacing)
     function initSpectators() {
       game.spectators = [];
       const shirtColors = ['#ef4444', '#3b82f6', '#facc15', '#10b981', '#f97316', '#ec4899', '#8b5cf6'];
@@ -2346,17 +2386,18 @@
       return arr.slice(0, count);
     }
 
-    function createTeamRoster(mode) {
+    function createTeamRoster(mode, effectiveRules) {
       game.players = [];
-      const isBeach = mode === 'beach';
-      const is7v7 = mode === 'classic7';
+      const rules = effectiveRules || (mode === 'online1v1' ? mp.subMode : mode);
+      const isBeach = rules === 'beach';
+      const is7v7 = rules === 'classic7';
       const isOnline1v1 = mode === 'online1v1' && mp.active;
 
       const homeAiNames = ['肥康', '費高奧懷利', '般奴雲度斯', '旺財', '龜仔明', '咖喱仔'];
       const awayAiNames = ['懷斯', '雪糕仔', '大笨象', 'D朗', 'CN仔', '大石頭'];
 
       // Red Team (Host / Player 1 Team - Attacks Right ->)
-      const redPool = is7v7 ? customAiNames : pickShuffledNames(homeAiNames, 6);
+      const redPool = is7v7 ? homeAiNames : pickShuffledNames(homeAiNames, 6);
       const redNames = ['門神輝', playerProfile.name || '香港飛魚', ...redPool];
       let redFormation;
       if (isBeach) {
@@ -2421,7 +2462,7 @@
       });
 
       // Blue Team (CPU Opponent or Guest P2 in 1v1 Online Mode - Attacks Left <-)
-      const bluePool = is7v7 ? customAiNames : pickShuffledNames(awayAiNames, 6);
+      const bluePool = is7v7 ? awayAiNames : pickShuffledNames(awayAiNames, 6);
       const guestCustomName = isOnline1v1 ? (mp.opponentProfile.name || '藍隊挑戰者') : bluePool[0];
       const blueNames = ['鐵壁龍', ...(isOnline1v1 ? [guestCustomName, ...bluePool] : bluePool)];
       let blueFormation;
@@ -2509,11 +2550,6 @@
       }
     }
 
-    /**
-     * Initiates 3-second pre-kickoff countdown (`screen = 'countdown'`).
-     * When `isSwimOff = true` (start of Period 1 & Period 2), players line up on their
-     * respective goal lines and sprint to the center pool when the whistle blows!
-     */
     function beginPreKickoffCountdown(isSwimOff = false, ballOwnerTeam = 'red') {
       game.screen = 'countdown';
       game.countdownTimer = 3.0;
@@ -2683,7 +2719,10 @@
     // ============================================================================
     function startMatch(mode, fromRemoteSignal = false) {
       game.mode = mode;
-      game.maxShotClock = mode === 'beach' ? 15 : 30;
+      const effectiveRules = mode === 'online1v1' ? (mp.subMode || 'classic7') : mode;
+      game.effectiveRules = effectiveRules;
+
+      game.maxShotClock = effectiveRules === 'beach' ? 15 : 30;
       game.shotClock = game.maxShotClock;
       game.period = 1;
       game.periodTime = 60;
@@ -2698,7 +2737,7 @@
       game.powerups = [];
       game.powerupSpawnTimer = 4;
 
-      if (mode === 'beach') {
+      if (effectiveRules === 'beach') {
         game.beachBall = { active: true, x: POOL.centerX, y: POOL.top + 70, vx: 56, vy: 44, r: 24 };
         game.beachWave = { active: false, x: POOL.left, dir: 1, timer: 7 };
       } else {
@@ -2706,11 +2745,11 @@
         game.beachWave.active = false;
       }
 
-      createTeamRoster(mode);
+      createTeamRoster(mode, effectiveRules);
       beginPreKickoffCountdown(true, 'red');
 
       if (mode === 'online1v1' && mp.active && mp.role === 'host' && !fromRemoteSignal) {
-        sendMpMessage({ type: 'start_match', mode: 'online1v1' });
+        sendMpMessage({ type: 'start_match', mode: 'online1v1', subMode: effectiveRules });
       }
 
       document.getElementById('menu-overlay').classList.add('hidden');
@@ -2722,7 +2761,7 @@
     }
 
     function isPlayerInOffsideZone(target, attackingTeam) {
-      if (game.mode === 'beach' || target.isGK) return false;
+      if (game.effectiveRules === 'beach' || target.isGK) return false;
       const twoMeterLine = attackingTeam === 'red'
         ? POOL.right - POOL.twoMeterDist
         : POOL.left + POOL.twoMeterDist;
@@ -2899,7 +2938,7 @@
     }
 
     function triggerShotBlock(defender) {
-      if (!defender || defender.isGK && game.screen === 'penalty_shot' && defender.state === 'block') return;
+      if (!defender || (defender.isGK && game.screen === 'penalty_shot' && defender.state === 'block')) return;
       if (defender.blockCooldown > 0 || defender.state === 'block' || defender.sinBinTimer > 0) return;
 
       defender.state = 'block';
@@ -2955,7 +2994,6 @@
         recipient.y = Math.max(POOL.top + 32, Math.min(POOL.bottom - 32, fy));
         giveBallTo(recipient, true);
 
-        // Push opposing defenders back 1 meter (~36px) for free throw space
         game.players.forEach(opp => {
           if (opp.team !== awardedTeam && !opp.isGK && opp.sinBinTimer <= 0) {
             const d = Math.hypot(opp.x - recipient.x, opp.y - recipient.y);
@@ -3025,7 +3063,6 @@
       gk.vy = 0;
       gk.facing = attackingTeam === 'red' ? -1 : 1;
 
-      // Clear all other players outside the 5m penalty box
       game.players.forEach(p => {
         if (p === victim || p === gk || p.sinBinTimer > 0) return;
         p.vx = 0;
@@ -3129,11 +3166,12 @@
       audio.stopBGM();
       audio.sfxWhistle(true);
 
-      const redWon = game.scoreRed > game.scoreBlue;
+      const isGuest = mp.active && mp.role === 'guest';
+      const myTeamWon = isGuest ? (game.scoreBlue > game.scoreRed) : (game.scoreRed > game.scoreBlue);
       const isDraw = game.scoreRed === game.scoreBlue;
 
       const titleEl = document.getElementById('summary-result-title');
-      if (redWon) {
+      if (myTeamWon) {
         titleEl.textContent = '🏆 勝利！VICTORY！';
         titleEl.style.color = '#ffd541';
         careerRecords.streak++;
@@ -3148,7 +3186,12 @@
         careerRecords.streak = 0;
       }
 
-      careerRecords.totalGoals += game.stats.goals;
+      const myAvatar = game.players.find(p => p.id === (isGuest ? 'blue_1' : 'red_1'));
+      const displayGoals = isGuest && myAvatar ? myAvatar.goals : game.stats.goals;
+      const displayBlocks = isGuest && myAvatar ? myAvatar.blocks : game.stats.blocks;
+      const displaySteals = isGuest && myAvatar ? myAvatar.steals : game.stats.steals;
+
+      careerRecords.totalGoals += displayGoals;
       saveRecords();
 
       document.getElementById('summary-score-line').textContent =
@@ -3167,9 +3210,9 @@
       document.getElementById('summary-mvp').textContent =
         `⭐ 本場 MVP：${mvp.name}（${mvp.goals} 入球 · ${mvp.blocks} 封手 · ${mvp.steals} 搶斷）`;
 
-      document.getElementById('stat-goals').textContent = game.stats.goals;
-      document.getElementById('stat-blocks').textContent = game.stats.blocks;
-      document.getElementById('stat-steals').textContent = game.stats.steals;
+      document.getElementById('stat-goals').textContent = displayGoals;
+      document.getElementById('stat-blocks').textContent = displayBlocks;
+      document.getElementById('stat-steals').textContent = displaySteals;
 
       document.getElementById('summary-overlay').classList.remove('hidden');
     }
@@ -3303,7 +3346,7 @@
         }
       }
 
-      if (game.mode === 'beach') {
+      if (game.effectiveRules === 'beach') {
         updateBeachHazards(dt);
       }
 
@@ -3388,9 +3431,18 @@
       if (!ps.shotTaken) {
         if (ps.attackingTeam === 'red') {
           handleHumanInput(dt);
-          const aiY = POOL.centerY + Math.sin(game.time * 7) * 42;
-          gk.y += (aiY - gk.y) * Math.min(1, dt * 6);
-          gk.y = Math.max(POOL.goalTop + 8, Math.min(POOL.goalBottom - 8, gk.y));
+          if (!mp.active) {
+            const aiY = POOL.centerY + Math.sin(game.time * 7) * 42;
+            gk.y += (aiY - gk.y) * Math.min(1, dt * 6);
+            gk.y = Math.max(POOL.goalTop + 8, Math.min(POOL.goalBottom - 8, gk.y));
+          } else {
+            const moveY = (mp.remoteKeys.down ? 1 : 0) - (mp.remoteKeys.up ? 1 : 0);
+            gk.vy = moveY * 145;
+            gk.y = Math.max(POOL.goalTop + 8, Math.min(POOL.goalBottom - 8, gk.y + gk.vy * dt));
+            if (mp.remoteKeys.shoot && gk.blockCooldown <= 0 && gk.state !== 'block') {
+              triggerShotBlock(gk);
+            }
+          }
 
           if (ps.timer <= 0) {
             executeShot(shooter, 0.75);
@@ -3411,9 +3463,14 @@
           }
           if (gk.blockCooldown > 0) gk.blockCooldown = Math.max(0, gk.blockCooldown - dt);
 
-          ps.aiShootTimer -= dt;
-          if (ps.aiShootTimer <= 0) {
-            executeShot(shooter, 0.85);
+          if (mp.active) {
+            handleHumanInput(dt);
+            if (ps.timer <= 0) executeShot(shooter, 0.75);
+          } else {
+            ps.aiShootTimer -= dt;
+            if (ps.aiShootTimer <= 0) {
+              executeShot(shooter, 0.85);
+            }
           }
         }
       }
@@ -3575,10 +3632,7 @@
     }
 
     function handleHumanInput(dt) {
-      // Process P1 (Red Team Host) Input
       processControllerInput(game.controlledPlayer, keys, inputTimers, 'red', dt);
-
-      // Process P2 (Blue Team Guest) Input when in 1v1 Online Mode
       if (mp.active && mp.blueControlledPlayer) {
         processControllerInput(mp.blueControlledPlayer, mp.remoteKeys, mp.remoteTimers, 'blue', dt);
       }
@@ -3655,13 +3709,11 @@
       const ball = game.ball;
 
       game.players.forEach(p => {
-        // Cooldowns & Immunity Timers
         if (p.blockCooldown > 0) p.blockCooldown = Math.max(0, p.blockCooldown - dt);
         if (p.actionCooldown > 0) p.actionCooldown = Math.max(0, p.actionCooldown - dt);
         if (p.stealImmunityTimer > 0) p.stealImmunityTimer = Math.max(0, p.stealImmunityTimer - dt);
         if (p.foulFreezeTimer > 0) p.foulFreezeTimer = Math.max(0, p.foulFreezeTimer - dt);
 
-        // Handle 15-Second Sin Bin Exclusion
         if (p.sinBinTimer > 0) {
           p.sinBinTimer -= dt;
           p.x = p.team === 'red' ? POOL.left + 26 : POOL.right - 26;
@@ -3677,7 +3729,6 @@
           return;
         }
 
-        // State timers (block, dive, dizzy)
         if (p.stateTimer > 0) {
           p.stateTimer -= dt;
           if (p.stateTimer <= 0) {
@@ -3688,7 +3739,6 @@
           }
         }
 
-        // Dizzy or Foul-Frozen players tread water slowly
         if (p.state === 'dizzy' || p.foulFreezeTimer > 0) {
           p.vx *= 0.85;
           p.vy *= 0.85;
@@ -3706,8 +3756,7 @@
           moveY = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
           wantsSprint = keys.sprint;
 
-          // Classic Mode 2m Offside Warning if human camps inside 2m without ball
-          if (game.mode !== 'beach' && !p.isGK && ball.owner !== p && p.x > POOL.right - POOL.twoMeterDist) {
+          if (game.effectiveRules !== 'beach' && !p.isGK && ball.owner !== p && p.x > POOL.right - POOL.twoMeterDist) {
             if (game.offsideWarnCooldown <= 0) {
               spawnFloatingText(p.x, p.y - 34, '⚠️ 2米越位區！', '#fbbf24');
               game.offsideWarnCooldown = 2.0;
@@ -3731,7 +3780,6 @@
           moveY /= mag;
         }
 
-        // Stamina & Sprint Swimming Speed
         const isSprinting = wantsSprint && mag > 0.1 && p.stamina > 5;
         if (isSprinting) {
           p.stamina = Math.max(0, p.stamina - 32 * dt);
@@ -3742,7 +3790,6 @@
           p.stamina = Math.min(p.maxStamina, p.stamina + (mag < 0.1 ? 26 : 14) * dt);
         }
 
-        // Calculate target swim velocity with water drag (Field players slowed by 20%, GK boosted by 20%)
         const isBlueCPU = p.team === 'blue';
         const baseSpeed = p.isGK
           ? (isBlueCPU ? 102 : 113)
@@ -3760,14 +3807,12 @@
         p.x += p.vx * dt;
         p.y += p.vy * dt;
 
-        // Facing direction
         if (Math.abs(p.vx) > 12) {
           p.facing = p.vx > 0 ? 1 : -1;
         } else if (ball.owner === p) {
           p.facing = p.team === 'red' ? 1 : -1;
         }
 
-        // Pool Boundaries & Goalkeeper 5m Box Constraint
         if (p.isGK) {
           const minX = p.team === 'red' ? POOL.left + 16 : POOL.right - 92;
           const maxX = p.team === 'red' ? POOL.left + 92 : POOL.right - 16;
@@ -3778,24 +3823,20 @@
           p.y = Math.max(POOL.top + 20, Math.min(POOL.bottom - 20, p.y));
         }
 
-        // Periodic water ripples when swimming
         if (Math.hypot(p.vx, p.vy) > 70 && Math.random() < 0.08) {
           spawnRipple(p.x, p.y + 6, 24);
         }
 
-        // Player-to-Player Collisions, Stealing & Three-Tier Referee Foul Check
         resolvePlayerContact(p);
       });
     }
 
-    // AI Decision Making for Teammates & Opponents
     function computePlayerAI(p, dt) {
       const ball = game.ball;
       let tx = p.homeX;
       let ty = p.homeY;
       let sprint = false;
 
-      // Swim-Off Center Sprint for AI swimmers!
       if (game.swimOffActive && !ball.owner && !p.isGK) {
         const d = Math.hypot(ball.x - p.x, ball.y - p.y);
         if (d < 84 && p.state === 'swim' && Math.random() < 0.085) {
@@ -3808,7 +3849,6 @@
         return { mx: ball.x - p.x, my: ball.y - p.y, sprint: true };
       }
 
-      // 1. Goalkeeper AI (Reaction & Save Ability +20%)
       if (p.isGK) {
         const isBlueCPU = p.team === 'blue';
         const goalLineX = p.team === 'red' ? POOL.left + 24 : POOL.right - 24;
@@ -3828,7 +3868,6 @@
         if (ball.isShot && ball.lastTouchTeam !== p.team && Math.abs(ball.vx) > 20) {
           const timeToGoal = (p.x - ball.x) / ball.vx;
           if (timeToGoal > 0 && timeToGoal < 1.25) {
-            // Reaction delay reduced by 20% for faster reflexes
             p.gkReactTimer = (p.gkReactTimer || 0) + dt;
             const reactionDelay = isBlueCPU ? 0.14 : 0.11;
             if (p.gkReactTimer < reactionDelay) {
@@ -3856,7 +3895,6 @@
           p.gkReactTimer = 0;
         }
 
-        // Default Goalkeeper Angle-Bisection Positioning (cuts down shooting angle)
         const goalCenterX = p.team === 'red' ? POOL.left + 8 : POOL.right - 8;
         const angleToBall = Math.atan2(ball.y - POOL.centerY, ball.x - goalCenterX);
         tx = goalLineX + dirOut * 8;
@@ -3865,19 +3903,16 @@
         return { mx: tx - p.x, my: ty - p.y, sprint: false };
       }
 
-      // 2. Ball Carrier AI (Player-level offensive intelligence: sharp corner shots, skip shots & smart passing)
       if (ball.owner === p) {
         p.aiActionTimer = (p.aiActionTimer || 0) + dt;
         const oppGoalX = p.team === 'red' ? POOL.right : POOL.left;
         const oppGK = game.players.find(pl => pl.team !== p.team && pl.isGK);
         const distToGoal = Math.hypot(oppGoalX - p.x, POOL.centerY - p.y);
 
-        // Swim aggressively into optimal shooting arc while dodging nearby defenders
         tx = p.team === 'red' ? POOL.right - 135 : POOL.left + 135;
         ty = POOL.centerY + Math.sin(game.time * 3.1 + p.homeY) * 105;
         sprint = distToGoal > 180 && p.stamina > 25;
 
-        // Check nearest defender pressure & lane
         let nearestDefDist = 999;
         let nearestDef = null;
         game.players.forEach(opp => {
@@ -3890,7 +3925,6 @@
           }
         });
 
-        // Subtle sidestep evasion when a defender closes in
         if (nearestDef && nearestDefDist < 76) {
           ty += (p.y >= nearestDef.y ? 48 : -48);
         }
@@ -3898,7 +3932,6 @@
         const shootRange = 325;
         const shootHesitation = 0.24;
         if (distToGoal < shootRange && p.aiActionTimer > shootHesitation) {
-          // Aim accurately for the far corner away from the GK
           const aimCornerY = oppGK && oppGK.y < POOL.centerY
             ? POOL.goalBottom - 12
             : POOL.goalTop + 12;
@@ -3939,7 +3972,6 @@
           }
         }
 
-        // Quick smart pass when tightly pressed or lane is blocked, or after holding briefly
         if ((nearestDefDist < 48 && p.aiActionTimer > 0.28) || p.aiActionTimer > 1.35) {
           p.aiActionTimer = 0;
           executePass(p, Math.random() < 0.35);
@@ -3949,7 +3981,6 @@
         return { mx: tx - p.x, my: ty - p.y, sprint };
       }
 
-      // 3. Loose Ball: Closest active swimmer on each team chases & dives for the ball
       if (!ball.owner) {
         const teamFieldPlayers = game.players.filter(pl => pl.team === p.team && !pl.isGK && pl.sinBinTimer <= 0);
         teamFieldPlayers.sort((a, b) => Math.hypot(a.x - ball.x, a.y - ball.y) - Math.hypot(b.x - ball.x, b.y - ball.y));
@@ -3970,7 +4001,6 @@
         }
       }
 
-      // 4. Team Offense Positioning (Dynamic cuts & spacing around attacking arc outside 2m line!)
       const attackingRight = p.team === 'red';
       const isTeamAttacking = ball.owner && ball.owner.team === p.team;
 
@@ -3997,7 +4027,6 @@
         }
         sprint = Math.hypot(tx - p.x, ty - p.y) > 95 && p.stamina > 30;
       } else {
-        // 5. Team Defense Positioning (Double-team press, passing lane interception & active shot blocking)
         const ballCarrier = ball.owner;
         if (ballCarrier) {
           const defenders = game.players.filter(pl => pl.team === p.team && !pl.isGK && pl.sinBinTimer <= 0);
@@ -4011,7 +4040,6 @@
             const distToCarrier = Math.hypot(ballCarrier.x - p.x, ballCarrier.y - p.y);
             sprint = distToCarrier > 38 && p.stamina > 12;
 
-            // Aggressive lunging steal when closing in from front/side
             const isBehindCarrier = (ballCarrier.facing === 1 && p.x < ballCarrier.x - 10) ||
                                     (ballCarrier.facing === -1 && p.x > ballCarrier.x + 10);
             if (!isBehindCarrier && distToCarrier < 66 && p.state === 'swim' && ballCarrier.stealImmunityTimer <= 0) {
@@ -4029,7 +4057,6 @@
               triggerShotBlock(p);
             }
           } else if (defenders[1] === p && Math.hypot(p.x - ballCarrier.x, p.y - ballCarrier.y) < 175) {
-            // Second closest defender helps trap & cut off direct shooting/passing lane
             const goalX = p.team === 'red' ? POOL.left + 44 : POOL.right - 44;
             tx = ballCarrier.x * 0.62 + goalX * 0.38;
             ty = ballCarrier.y * 0.62 + POOL.centerY * 0.38 + (p.homeY > ballCarrier.y ? 22 : -22);
@@ -4038,7 +4065,6 @@
               triggerShotBlock(p);
             }
           } else {
-            // Tightly mark nearest open attackers & intercept passing lanes
             const attackers = game.players.filter(pl => pl.team !== p.team && !pl.isGK && pl.id !== ballCarrier.id && pl.sinBinTimer <= 0);
             let nearestAtt = null;
             let minAttDist = 999;
@@ -4087,7 +4113,6 @@
           other.x += nx * overlap;
           other.y += ny * overlap;
 
-          // Steal / Three-Tier Foul interaction when opponents collide
           if (p.team !== other.team) {
             const carrier = game.ball.owner === p ? p : (game.ball.owner === other ? other : null);
             const tackler = carrier === p ? other : (carrier === other ? p : null);
@@ -4098,22 +4123,18 @@
                                    (carrier.facing === -1 && tackler.x > carrier.x + 10);
 
               if (tacklerSpeed > 185 && isFromBehind) {
-                // Check if carrier is inside opponent's 5-meter zone facing goal -> Tier 3: 5m Penalty Shot!
                 const insideFiveM = carrier.team === 'red'
                   ? (carrier.x >= POOL.right - POOL.fiveMeterDist)
                   : (carrier.x <= POOL.left + POOL.fiveMeterDist);
 
-                if (insideFiveM && game.mode !== 'beach') {
+                if (insideFiveM && game.effectiveRules !== 'beach') {
                   triggerFiveMeterPenalty(carrier, carrier.team);
                 } else {
-                  // Tier 2: Exclusion Foul (Red Flag + 15s Corner Sin Bin)
                   triggerExclusionFoul(tackler, carrier, carrier.x, carrier.y);
                 }
               } else if (tacklerSpeed > 135 && isFromBehind && Math.random() < 0.22) {
-                // Tier 1: Ordinary Foul on minor impeding from behind
                 triggerOrdinaryFoul(carrier.x, carrier.y, carrier.team, '阻擋犯規！防守退開1米');
               } else if (tacklerSpeed > 100 || tackler.state === 'block' || tackler.state === 'dive') {
-                // Clean Water Polo Steal!
                 giveBallTo(tackler, true);
                 tackler.steals++;
                 if (tackler === game.controlledPlayer) {
@@ -4129,7 +4150,6 @@
       });
     }
 
-    // Metallic Goalpost & Crossbar Collision Check
     function checkGoalpostCollision(ball) {
       if (ball.z > 40) return false;
       const posts = [
@@ -4162,7 +4182,6 @@
         }
       }
 
-      // Crossbar hit check (ball at crossbar height 32..40 crossing goal line)
       const nearGoalMouthY = ball.y >= POOL.goalTop && ball.y <= POOL.goalBottom;
       if (nearGoalMouthY && ball.z >= 32 && ball.z <= 40) {
         if (Math.abs(ball.x - POOL.left) < 8 || Math.abs(ball.x - POOL.right) < 8) {
@@ -4190,7 +4209,6 @@
         }
       }
 
-      // 1. Ball held by a player (One-hand water polo dribble in front of swimmer)
       if (ball.owner) {
         const o = ball.owner;
         const dribbleBob = Math.sin(game.time * 10) * 2.4;
@@ -4201,16 +4219,14 @@
         return;
       }
 
-      // 2. Free Ball Flight & Water Physics
       ball.trail.push({ x: ball.x, y: ball.y, z: ball.z });
       if (ball.trail.length > 8) ball.trail.shift();
 
       ball.x += ball.vx * dt;
       ball.y += ball.vy * dt;
       ball.z += ball.vz * dt;
-      ball.vz -= 420 * dt; // Gravity (2x HD scale)
+      ball.vz -= 420 * dt;
 
-      // Water surface bounce / Skip Shot physics!
       if (ball.z <= 0) {
         ball.z = 0;
         if (ball.isSkipShot && !ball.skipBounced) {
@@ -4238,15 +4254,12 @@
         }
       }
 
-      // Check Metallic Goalpost & Crossbar Collisions
       if (checkGoalpostCollision(ball)) {
         return;
       }
 
-      // 3. Check Interceptions, Shot Blocks & Goalkeeper Saves
       for (const p of game.players) {
         if (p.sinBinTimer > 0 || p.state === 'dizzy') continue;
-        // Passer cannot self-catch during cooldown; shooter cannot immediately re-catch own shot
         if (ball.passIgnoreTimer > 0 && p === ball.lastPasser) continue;
         if (ball.isShot && p === ball.lastShooter) continue;
 
@@ -4259,13 +4272,11 @@
         if (dist <= reach && ball.z <= maxCatchZ) {
           if (ball.isShot && p.team !== ball.lastTouchTeam) {
             const shotSpeed = Math.hypot(ball.vx, ball.vy);
-            // Calculate distance from where the shot was taken to the goal line
             const shotOriginX = ball.lastShooter ? ball.lastShooter.x : ball.x;
             const goalLineX = p.team === 'red' ? POOL.left : POOL.right;
             const shotDistance = Math.abs(goalLineX - shotOriginX);
 
             if (p.state === 'block' && !p.isGK) {
-              // Awesome Field Player Shot Block!
               p.blocks++;
               if (p.team === 'red') game.stats.blocks++;
               ball.vx = -ball.vx * 0.45;
@@ -4291,10 +4302,8 @@
                 spawnFloatingText(p.x, p.y - 36, '💫 門將頭頂冒金星！', '#ffd541');
                 return;
               } else if (shotDistance < 205 && Math.random() < (p.state === 'block' ? 0.52 : 0.70)) {
-                // Close-range shot (inside ~5-6m): GK save rate increased by +20%
                 continue;
               } else if (p.state !== 'block' && shotSpeed > 650 && Math.random() < 0.22) {
-                // Medium/long-range power shot: GK save rate increased by +20%
                 continue;
               } else if (ball.isSkipShot && p.state !== 'block' && Math.random() < 0.42) {
                 p.blocks++;
@@ -4319,7 +4328,6 @@
               }
             }
           } else if (!ball.isShot) {
-            // Swim-Off Opening Sprint Win!
             if (game.swimOffActive) {
               game.swimOffActive = false;
               audio.sfxPowerup();
@@ -4333,7 +4341,6 @@
         }
       }
 
-      // 4. Goal Detection (Left Goal for Blue Team, Right Goal for Red Team)
       const inGoalMouthY = ball.y >= POOL.goalTop + 4 && ball.y <= POOL.goalBottom - 4 && ball.z <= 34;
       if (inGoalMouthY) {
         if (ball.x >= POOL.right) {
@@ -4345,7 +4352,6 @@
         }
       }
 
-      // 5. Pool Wall Rebounds
       if (ball.y < POOL.top + 8) {
         ball.y = POOL.top + 8;
         ball.vy = Math.abs(ball.vy) * 0.7;
@@ -4375,24 +4381,15 @@
     function renderGame() {
       ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
 
-      // 1. Tropical Island Ocean & Golden Beach Backdrop
       drawTropicalEnvironment();
-
-      // 2. Spectator Bleachers with Mexican Wave & Flag Waving
       drawSpectatorStands();
-
-      // 3. Referee Running Along Top Pool Deck (with Red/Yellow Penalty Flags!)
       drawReferee();
-
-      // 4. Water Polo Pool, Shimmering Waves, 2m/5m Markings, Sin Bin & Lane Buoys
       drawPoolAndMarkings();
 
-      // 5. Beach Mode Hazards
-      if (game.mode === 'beach' && game.screen !== 'menu') {
+      if (game.effectiveRules === 'beach' && game.screen !== 'menu') {
         drawBeachHazards();
       }
 
-      // 6. Water Ripples (Under players)
       game.ripples.forEach(r => {
         ctx.strokeStyle = `rgba(255, 255, 255, ${r.alpha})`;
         ctx.lineWidth = 2;
@@ -4401,13 +4398,9 @@
         ctx.stroke();
       });
 
-      // 7. Depth-Sorted Players, Goals & Water Polo Ball
       drawDepthSortedEntities();
-
-      // 8. Water Splashes, Confetti & Crisp Outlined Floating Popups
       drawParticlesAndTexts();
 
-      // 9. Camera Lens Splash Drops
       game.screenDrops.forEach(d => {
         ctx.fillStyle = 'rgba(224, 242, 254, 0.55)';
         ctx.beginPath();
@@ -4417,12 +4410,10 @@
         ctx.fillRect(d.x - d.r * 0.4, d.y - d.r * 0.4, 4, 4);
       });
 
-      // 10. 16-Bit TV Broadcast Scoreboard HUD & Shot Clock
       if (game.screen !== 'menu') {
         drawBroadcastScoreboard();
       }
 
-      // 11. State Overlays (3s Countdown, 5s Period Break, 5m Penalty Duel, Goal Banner)
       if (game.screen === 'countdown') {
         drawCountdownOverlay();
       } else if (game.screen === 'period_break') {
@@ -4448,20 +4439,16 @@
         }
       }
 
-      // Golden Sandy Island Platform
       drawPixelRect(ctx, 72, 88, LOGICAL_W - 144, LOGICAL_H - 104, '#fde047');
       drawPixelRect(ctx, 80, 96, LOGICAL_W - 160, LOGICAL_H - 120, '#fef08a');
 
-      // Concrete Pool Deck
       drawPixelRect(ctx, 100, 108, LOGICAL_W - 200, LOGICAL_H - 144, '#cbd5e1');
       drawPixelRect(ctx, 108, 116, LOGICAL_W - 216, LOGICAL_H - 160, '#e2e8f0');
 
-      // Swaying Pixel Palm Trees on the Island Corners
       drawPalmTree(44, 136, 0);
       drawPalmTree(40, 510, 1.4);
       drawPalmTree(1072, 500, 2.5);
 
-      // Striped Lighthouse on Top-Right Cliff
       drawLighthouse(1052, 84);
     }
 
@@ -4545,12 +4532,11 @@
     }
 
     function drawPoolAndMarkings() {
-      const waterBase = game.mode === 'beach' ? '#06b6d4' : '#0284c7';
-      const waterInner = game.mode === 'beach' ? '#22d3ee' : '#0ea5e9';
+      const waterBase = game.effectiveRules === 'beach' ? '#06b6d4' : '#0284c7';
+      const waterInner = game.effectiveRules === 'beach' ? '#22d3ee' : '#0ea5e9';
       drawPixelRect(ctx, POOL.left, POOL.top, POOL.width, POOL.height, waterBase);
       drawPixelRect(ctx, POOL.left + 6, POOL.top + 6, POOL.width - 12, POOL.height - 12, waterInner);
 
-      // Animated Shimmering Water Caustic Waves
       const shift = (Math.floor(game.time * 16) % 24) * 2;
       ctx.fillStyle = 'rgba(186, 230, 253, 0.35)';
       for (let y = POOL.top + 20; y < POOL.bottom - 16; y += 36) {
@@ -4561,7 +4547,6 @@
         }
       }
 
-      // Corner Sin Bin Exclusion Zones (Top-Left & Top-Right)
       ctx.fillStyle = 'rgba(239, 35, 60, 0.22)';
       ctx.fillRect(POOL.left + 6, POOL.top + 6, 46, 36);
       ctx.fillRect(POOL.right - 52, POOL.top + 6, 46, 36);
@@ -4570,10 +4555,8 @@
       ctx.strokeRect(POOL.left + 6, POOL.top + 6, 46, 36);
       ctx.strokeRect(POOL.right - 52, POOL.top + 6, 46, 36);
 
-      // Center Half-Way Line (White)
       drawPixelRect(ctx, POOL.centerX - 2, POOL.top + 4, 4, POOL.height - 8, 'rgba(255,255,255,0.65)');
 
-      // 5-Meter Lines (Yellow dashed)
       const fiveMLeft = POOL.left + POOL.fiveMeterDist;
       const fiveMRight = POOL.right - POOL.fiveMeterDist;
       for (let y = POOL.top + 8; y < POOL.bottom - 8; y += 16) {
@@ -4581,7 +4564,6 @@
         drawPixelRect(ctx, fiveMRight, y, 4, 8, 'rgba(253, 224, 71, 0.78)');
       }
 
-      // 2-Meter Lines (Red - Offside Zone)
       const twoMLeft = POOL.left + POOL.twoMeterDist;
       const twoMRight = POOL.right - POOL.twoMeterDist;
       for (let y = POOL.top + 8; y < POOL.bottom - 8; y += 12) {
@@ -4589,7 +4571,6 @@
         drawPixelRect(ctx, twoMRight, y, 4, 6, 'rgba(244, 63, 94, 0.78)');
       }
 
-      // Floating Lane Buoys along Top & Bottom Edges
       for (let x = POOL.left + 12; x < POOL.right - 12; x += 20) {
         let buoyColor = '#ffffff';
         if (x < twoMLeft || x > twoMRight) buoyColor = '#ef4444';
@@ -4786,32 +4767,30 @@
       ctx.lineWidth = 3;
       ctx.strokeRect(bx, by, bw, bh);
 
-      // Red Team Badge & Score
       drawPixelRect(ctx, bx + 8, by + 6, 118, 32, '#dc2626');
       drawOutlinedText(ctx, '紅隊 主場', bx + 67, by + 28, 18, '#ffffff', '#7f1d1d', 2);
       drawOutlinedText(ctx, String(game.scoreRed), bx + 154, by + 31, 26, '#ffd541', '#061324', 3);
 
-      // Center Period & Game Clock
       const mins = Math.floor(Math.max(0, game.periodTime) / 60);
       const secs = Math.floor(Math.max(0, game.periodTime) % 60);
       const timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
       drawOutlinedText(ctx, `第${game.period}/${game.maxPeriods}節`, bx + 275, by + 20, 16, '#7ee8fa', '#061324', 2.5);
       drawOutlinedText(ctx, timeStr, bx + 275, by + 39, 18, '#ffffff', '#061324', 2.5);
 
-      // Shot Clock Box
       const scVal = Math.ceil(Math.max(0, game.shotClock));
       const scUrgent = scVal <= 5;
       drawPixelRect(ctx, bx + 348, by + 6, 74, 32, scUrgent ? '#dc2626' : '#0f172a');
       drawOutlinedText(ctx, `${scVal}s`, bx + 385, by + 30, 22, scUrgent ? '#ffffff' : '#38e54d', '#061324', 2.5);
 
-      // Blue Team Score & Badge
       drawOutlinedText(ctx, String(game.scoreBlue), bx + 462, by + 31, 26, '#ffd541', '#061324', 3);
       drawPixelRect(ctx, bx + 492, by + 6, 118, 32, '#2563eb');
       drawOutlinedText(ctx, '藍隊 客隊', bx + 551, by + 28, 18, '#ffffff', '#1e3a8a', 2);
 
-      // Mode Tag
-      const modeLabel = game.mode === 'online1v1' ? `1v1#${mp.roomCode}` : (game.mode === 'beach' ? '沙灘' : (game.mode === 'classic7' ? '7v7' : '5v5'));
-      drawOutlinedText(ctx, modeLabel, bx + 654, by + 28, 17, '#ffd541', '#061324', 2.5);
+      const subTag = game.effectiveRules === 'beach' ? '4v4' : (game.effectiveRules === 'classic7' ? '7v7' : '5v5');
+      const modeLabel = game.mode === 'online1v1'
+        ? `1v1(${subTag})`
+        : (game.mode === 'beach' ? '沙灘' : (game.mode === 'classic7' ? '7v7' : '5v5'));
+      drawOutlinedText(ctx, modeLabel, bx + 654, by + 28, 16, '#ffd541', '#061324', 2.5);
     }
 
     function drawCountdownOverlay() {
@@ -4829,7 +4808,6 @@
       drawOutlinedText(ctx, label, LOGICAL_W / 2, 290, 46, '#ffd541', '#d92638', 4);
       drawOutlinedText(ctx, subText, LOGICAL_W / 2, 332, 18, '#7ee8fa', '#061324', 3);
 
-      // Highlight controlled player with an animated arrow
       const cp = game.controlledPlayer;
       if (cp) {
         const bounce = Math.sin(game.time * 10) * 6;
@@ -4852,7 +4830,8 @@
 
     function drawPenaltyBanner() {
       const ps = game.penaltyState;
-      const msg = ps.attackingTeam === 'red'
+      const myTeam = (mp.active && mp.role === 'guest') ? 'blue' : 'red';
+      const msg = ps.attackingTeam === myTeam
         ? '🚨 五米極刑點球！按【上/下】瞄準角位，按【K / X】射門！'
         : '🚨 對手五米點球！按【上/下】移動龍門，按【K / X】飛身撲救！';
 
@@ -4908,6 +4887,8 @@
     // ============================================================================
     window.addEventListener('keydown', e => {
       if (document.activeElement === document.getElementById('player-name-input')) return;
+      if (document.activeElement === document.getElementById('mp-join-input')) return;
+      if (document.activeElement === document.getElementById('mp-worker-url')) return;
       const k = e.key.toLowerCase();
       if (k === 'w' || e.key === 'ArrowUp') keys.up = true;
       if (k === 's' || e.key === 'ArrowDown') keys.down = true;
@@ -4938,138 +4919,104 @@
       const btnShoot = document.getElementById('btn-shoot');
       const btnSprint = document.getElementById('btn-sprint');
 
-      const syncPadLayout = () => {
-        appEl.classList.toggle('has-touch-pad', touchLayer.classList.contains('active'));
-        resizeCanvas();
+      const syncPadLayout = active => {
+        touchLayer.classList.toggle('active', active);
+        appEl.classList.toggle('has-touch-pad', active);
+        resizeCanvasToFit();
       };
 
-      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-        touchLayer.classList.add('active');
-        syncPadLayout();
+      const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+      if (isTouchDevice) {
+        syncPadLayout(true);
       }
 
       document.getElementById('btn-toggle-pad').addEventListener('click', () => {
-        touchLayer.classList.toggle('active');
-        syncPadLayout();
         audio.sfxClick();
+        const nextState = !touchLayer.classList.contains('active');
+        syncPadLayout(nextState);
       });
 
       let joyTouchId = null;
-      const maxRadius = 34;
+      const maxRadius = 38;
 
-      function updateJoyFromTouch(touch) {
+      const updateJoystick = (clientX, clientY) => {
         const rect = joyZone.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
         const cy = rect.top + rect.height / 2;
-        let dx = touch.clientX - cx;
-        let dy = touch.clientY - cy;
+        let dx = clientX - cx;
+        let dy = clientY - cy;
         const dist = Math.hypot(dx, dy);
         if (dist > maxRadius) {
           dx = (dx / dist) * maxRadius;
           dy = (dy / dist) * maxRadius;
         }
         joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+        const dead = 10;
+        keys.left = dx < -dead;
+        keys.right = dx > dead;
+        keys.up = dy < -dead;
+        keys.down = dy > dead;
+      };
 
-        const deadzone = 10;
-        keys.left = dx < -deadzone;
-        keys.right = dx > deadzone;
-        keys.up = dy < -deadzone;
-        keys.down = dy > deadzone;
-      }
+      const resetJoystick = () => {
+        joyTouchId = null;
+        joyZone.classList.remove('engaged');
+        joyKnob.style.transform = 'translate(0px, 0px)';
+        keys.up = keys.down = keys.left = keys.right = false;
+      };
 
       joyZone.addEventListener('touchstart', e => {
         e.preventDefault();
         const t = e.changedTouches[0];
         joyTouchId = t.identifier;
         joyZone.classList.add('engaged');
-        updateJoyFromTouch(t);
+        updateJoystick(t.clientX, t.clientY);
       }, { passive: false });
 
       joyZone.addEventListener('touchmove', e => {
         e.preventDefault();
-        for (const t of e.changedTouches) {
-          if (t.identifier === joyTouchId) {
-            updateJoyFromTouch(t);
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === joyTouchId) {
+            updateJoystick(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
           }
         }
       }, { passive: false });
 
-      const resetJoy = e => {
-        for (const t of e.changedTouches) {
-          if (t.identifier === joyTouchId) {
-            joyTouchId = null;
-            joyZone.classList.remove('engaged');
-            joyKnob.style.transform = 'translate(0px, 0px)';
-            keys.left = keys.right = keys.up = keys.down = false;
-          }
+      joyZone.addEventListener('touchend', e => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === joyTouchId) resetJoystick();
         }
+      });
+      joyZone.addEventListener('touchcancel', resetJoystick);
+
+      const bindVirtualBtn = (el, keyName) => {
+        const press = e => {
+          e.preventDefault();
+          keys[keyName] = true;
+          el.classList.add('pressed');
+        };
+        const release = e => {
+          e.preventDefault();
+          keys[keyName] = false;
+          el.classList.remove('pressed');
+        };
+        el.addEventListener('touchstart', press, { passive: false });
+        el.addEventListener('touchend', release, { passive: false });
+        el.addEventListener('touchcancel', release, { passive: false });
+        el.addEventListener('mousedown', press);
+        el.addEventListener('mouseup', release);
+        el.addEventListener('mouseleave', release);
       };
-      joyZone.addEventListener('touchend', resetJoy);
-      joyZone.addEventListener('touchcancel', resetJoy);
 
-      function bindVirtualButton(el, keyName) {
-        let lastTouchTs = 0;
-        const pressTouch = e => {
-          e.preventDefault();
-          e.stopPropagation();
-          lastTouchTs = performance.now();
-          keys[keyName] = true;
-          el.classList.add('pressed');
-        };
-        const releaseTouch = e => {
-          e.preventDefault();
-          e.stopPropagation();
-          lastTouchTs = performance.now();
-          keys[keyName] = false;
-          el.classList.remove('pressed');
-        };
-        const pressMouse = e => {
-          if (performance.now() - lastTouchTs < 500) return;
-          e.preventDefault();
-          keys[keyName] = true;
-          el.classList.add('pressed');
-        };
-        const releaseMouse = e => {
-          if (performance.now() - lastTouchTs < 500) return;
-          e.preventDefault();
-          keys[keyName] = false;
-          el.classList.remove('pressed');
-        };
-
-        el.addEventListener('touchstart', pressTouch, { passive: false });
-        el.addEventListener('touchend', releaseTouch, { passive: false });
-        el.addEventListener('touchcancel', releaseTouch, { passive: false });
-        el.addEventListener('mousedown', pressMouse);
-        el.addEventListener('mouseup', releaseMouse);
-        el.addEventListener('mouseleave', releaseMouse);
-      }
-
-      bindVirtualButton(btnPass, 'pass');
-      bindVirtualButton(btnShoot, 'shoot');
-      bindVirtualButton(btnSprint, 'sprint');
+      bindVirtualBtn(btnPass, 'pass');
+      bindVirtualBtn(btnShoot, 'shoot');
+      bindVirtualBtn(btnSprint, 'sprint');
     }
 
     // ============================================================================
-    // 14. UI EVENT WIRING & RESPONSIVE CANVAS SCALING
+    // 14. UI BINDINGS, CUSTOMIZER CONTROLS & RESPONSIVE CANVAS SCALING
     // ============================================================================
-    function resizeCanvas() {
-      const wrapper = document.getElementById('canvas-wrapper');
-      const ww = Math.max(200, wrapper.clientWidth - 10);
-      const wh = Math.max(140, wrapper.clientHeight - 10);
-      const aspect = LOGICAL_W / LOGICAL_H;
-
-      let displayW = ww;
-      let displayH = ww / aspect;
-      if (displayH > wh) {
-        displayH = wh;
-        displayW = wh * aspect;
-      }
-
-      canvas.style.width = `${Math.floor(displayW)}px`;
-      canvas.style.height = `${Math.floor(displayH)}px`;
-    }
-
-    function updateCustomizerUI() {
+    function refreshCustomizerLabels() {
       document.getElementById('val-capStyle').textContent = CUSTOM_OPTIONS.capStyle[playerProfile.capStyle].name;
       document.getElementById('val-capColor').textContent = CUSTOM_OPTIONS.capColor[playerProfile.capColor].name;
       document.getElementById('val-eyewear').textContent = CUSTOM_OPTIONS.eyewear[playerProfile.eyewear].name;
@@ -5081,21 +5028,21 @@
     function setupUIEvents() {
       document.querySelectorAll('.cycle-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          const prop = btn.dataset.custom;
-          const dir = parseInt(btn.dataset.dir, 10);
-          const len = CUSTOM_OPTIONS[prop].length;
-          playerProfile[prop] = (playerProfile[prop] + dir + len) % len;
-          updateCustomizerUI();
           audio.sfxClick();
+          const key = btn.dataset.custom;
+          const dir = parseInt(btn.dataset.dir, 10);
+          const len = CUSTOM_OPTIONS[key].length;
+          playerProfile[key] = (playerProfile[key] + dir + len) % len;
+          refreshCustomizerLabels();
         });
       });
 
       document.getElementById('btn-random-look').addEventListener('click', () => {
-        Object.keys(CUSTOM_OPTIONS).forEach(prop => {
-          playerProfile[prop] = Math.floor(Math.random() * CUSTOM_OPTIONS[prop].length);
-        });
-        updateCustomizerUI();
         audio.sfxPowerup();
+        Object.keys(CUSTOM_OPTIONS).forEach(k => {
+          playerProfile[k] = Math.floor(Math.random() * CUSTOM_OPTIONS[k].length);
+        });
+        refreshCustomizerLabels();
       });
 
       const nameInput = document.getElementById('player-name-input');
@@ -5104,17 +5051,14 @@
       });
 
       let selectedMode = 'classic7';
-      const modeCards = document.querySelectorAll('.mode-card');
-      const mpModal = document.getElementById('mp-modal');
-
-      modeCards.forEach(card => {
+      document.querySelectorAll('.mode-card').forEach(card => {
         card.addEventListener('click', () => {
-          modeCards.forEach(c => c.classList.remove('selected'));
+          audio.sfxClick();
+          document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
           card.classList.add('selected');
           selectedMode = card.dataset.mode;
-          audio.sfxClick();
           if (selectedMode === 'online1v1') {
-            mpModal.classList.remove('hidden');
+            document.getElementById('mp-modal').classList.remove('hidden');
           }
         });
       });
@@ -5122,140 +5066,163 @@
       document.getElementById('btn-start-game').addEventListener('click', () => {
         playerProfile.name = nameInput.value.trim() || '香港飛魚';
         if (selectedMode === 'online1v1') {
-          if (mp.active && mp.opponentConnected && mp.role === 'host') {
-            startMatch('online1v1');
-          } else {
-            mpModal.classList.remove('hidden');
-            audio.sfxClick();
+          if (!mp.active || !mp.opponentConnected) {
+            document.getElementById('mp-modal').classList.remove('hidden');
+            setMpLobbyStatus('請先建立或加入 4 位房間編號等待好友！', 'wait');
+            return;
           }
-          return;
+          startMatch('online1v1');
+        } else {
+          disconnectMultiplayer();
+          startMatch(selectedMode);
         }
-        disconnectMultiplayer();
-        startMatch(selectedMode);
       });
 
-      // 1v1 Multiplayer Lobby Button Wiring
       document.getElementById('btn-mp-lobby').addEventListener('click', () => {
-        mpModal.classList.remove('hidden');
         audio.sfxClick();
+        document.getElementById('mp-modal').classList.remove('hidden');
       });
 
       document.getElementById('btn-close-mp').addEventListener('click', () => {
-        mpModal.classList.add('hidden');
         audio.sfxClick();
+        document.getElementById('mp-modal').classList.add('hidden');
+      });
+
+      document.querySelectorAll('.mp-submode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (mp.active && mp.role === 'guest') {
+            setMpLobbyStatus('賽制由房主決定，請等待房主選擇或開波', 'wait');
+            return;
+          }
+          audio.sfxClick();
+          setMpSubMode(btn.dataset.submode, true);
+        });
       });
 
       document.getElementById('btn-mp-create').addEventListener('click', () => {
+        audio.sfxClick();
         const code = generateRoomCode();
         document.getElementById('mp-created-code').textContent = code;
         connectToCloudflareRoom(code, 'host');
-        audio.sfxPowerup();
       });
 
       document.getElementById('btn-mp-copy').addEventListener('click', () => {
-        const code = document.getElementById('mp-created-code').textContent.trim();
-        if (!code || code === '----') return;
-        const tempInput = document.createElement('input');
-        tempInput.value = code;
-        document.body.appendChild(tempInput);
-        tempInput.select();
-        document.execCommand('copy');
-        document.body.removeChild(tempInput);
-        setMpLobbyStatus(`📋 已複製房間編號 #${code}，快發給好友！`, 'ok');
-        audio.sfxClick();
+        const codeText = document.getElementById('mp-created-code').textContent;
+        if (!codeText || codeText === '----') return;
+        const temp = document.createElement('textarea');
+        temp.value = codeText;
+        document.body.appendChild(temp);
+        temp.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(temp);
+        audio.sfxPowerup();
+        setMpLobbyStatus(`已複製房間編號 #${codeText}！快傳給好友吧`, 'ok');
       });
 
       document.getElementById('btn-mp-join').addEventListener('click', () => {
-        const code = document.getElementById('mp-join-input').value.trim().toUpperCase();
-        if (code.length < 4) {
-          setMpLobbyStatus('請輸入完整 4 位房間編號！', 'err');
+        const rawCode = document.getElementById('mp-join-input').value.trim().toUpperCase();
+        if (!/^[A-Z0-9]{4}$/.test(rawCode)) {
+          setMpLobbyStatus('請輸入有效的 4 位房間編號（例如 8824）', 'err');
           return;
         }
-        connectToCloudflareRoom(code, 'guest');
         audio.sfxClick();
+        connectToCloudflareRoom(rawCode, 'guest');
       });
 
       document.getElementById('btn-mp-start-now').addEventListener('click', () => {
-        mpModal.classList.add('hidden');
         playerProfile.name = nameInput.value.trim() || '香港飛魚';
+        document.getElementById('mp-modal').classList.add('hidden');
+        selectedMode = 'online1v1';
         startMatch('online1v1');
       });
 
       document.getElementById('btn-rematch').addEventListener('click', () => {
-        startMatch(game.mode);
+        audio.sfxClick();
+        if (game.mode === 'online1v1' && mp.active) {
+          if (mp.role === 'host') {
+            startMatch('online1v1');
+          } else {
+            document.getElementById('summary-score-line').textContent = '⏳ 等待房主發起再戰一場...';
+          }
+        } else {
+          startMatch(game.mode);
+        }
       });
 
-      document.getElementById('btn-back-menu').addEventListener('click', () => {
-        returnToMainMenu();
-      });
+      const returnToMenu = () => {
+        audio.sfxClick();
+        game.screen = 'menu';
+        document.getElementById('summary-overlay').classList.add('hidden');
+        document.getElementById('menu-overlay').classList.remove('hidden');
+        document.getElementById('btn-home').classList.add('hidden');
+        audio.startBGM('menu');
+      };
 
-      document.getElementById('btn-home').addEventListener('click', () => {
-        returnToMainMenu();
-      });
+      document.getElementById('btn-back-menu').addEventListener('click', returnToMenu);
+      document.getElementById('btn-home').addEventListener('click', returnToMenu);
 
-      const btnAudio = document.getElementById('btn-toggle-audio');
-      btnAudio.addEventListener('click', () => {
-        const isOn = audio.toggle();
-        btnAudio.textContent = isOn ? '🔊 音效' : '🔇 靜音';
+      const audioBtn = document.getElementById('btn-toggle-audio');
+      audioBtn.addEventListener('click', () => {
+        const on = audio.toggle();
+        audioBtn.textContent = on ? '🔊 音效' : '🔇 靜音';
       });
 
       const helpModal = document.getElementById('help-modal');
       document.getElementById('btn-help').addEventListener('click', () => {
-        helpModal.classList.remove('hidden');
         audio.sfxClick();
+        helpModal.classList.remove('hidden');
       });
       document.getElementById('btn-close-help').addEventListener('click', () => {
-        helpModal.classList.add('hidden');
         audio.sfxClick();
+        helpModal.classList.add('hidden');
       });
     }
 
-    function returnToMainMenu() {
-      game.screen = 'menu';
-      document.getElementById('menu-overlay').classList.remove('hidden');
-      document.getElementById('summary-overlay').classList.add('hidden');
-      document.getElementById('btn-home').classList.add('hidden');
-      audio.startBGM('menu');
+    function resizeCanvasToFit() {
+      const wrapper = document.getElementById('canvas-wrapper');
+      const availW = wrapper.clientWidth - 8;
+      const availH = wrapper.clientHeight - 8;
+      const aspect = LOGICAL_W / LOGICAL_H;
+
+      let drawW = availW;
+      let drawH = drawW / aspect;
+      if (drawH > availH) {
+        drawH = availH;
+        drawW = drawH * aspect;
+      }
+
+      canvas.style.width = `${Math.max(280, Math.floor(drawW))}px`;
+      canvas.style.height = `${Math.max(158, Math.floor(drawH))}px`;
     }
 
     // ============================================================================
-    // 15. MAIN 60 FPS GAME LOOP & WINDOW INITIALIZATION
+    // 15. MAIN ANIMATION LOOP & WINDOW ONLOAD BOOTSTRAP
     // ============================================================================
-    let lastTimestamp = 0;
-    function gameLoop(timestamp) {
-      if (!lastTimestamp) lastTimestamp = timestamp;
-      const rawDt = Math.min(0.05, (timestamp - lastTimestamp) / 1000);
-      lastTimestamp = timestamp;
+    let lastFrameTime = 0;
 
-      updateGame(rawDt);
+    function mainLoop(timestamp) {
+      if (!lastFrameTime) lastFrameTime = timestamp;
+      const dt = (timestamp - lastFrameTime) / 1000;
+      lastFrameTime = timestamp;
+
+      updateGame(dt);
       renderGame();
       renderCustomizerPreview();
 
-      requestAnimationFrame(gameLoop);
+      requestAnimationFrame(mainLoop);
     }
-
-    window.addEventListener('resize', resizeCanvas);
 
     window.onload = function () {
       loadRecords();
       initSpectators();
-      updateCustomizerUI();
+      refreshCustomizerLabels();
       setupUIEvents();
       setupTouchControls();
-      resizeCanvas();
+      resizeCanvasToFit();
+      window.addEventListener('resize', resizeCanvasToFit);
 
-      const unlockAudioOnce = () => {
-        audio.init();
-        if (audio.enabled && !audio.bgmTimer) {
-          audio.startBGM(game.screen === 'menu' ? 'menu' : 'match');
-        }
-        window.removeEventListener('pointerdown', unlockAudioOnce);
-        window.removeEventListener('keydown', unlockAudioOnce);
-      };
-      window.addEventListener('pointerdown', unlockAudioOnce);
-      window.addEventListener('keydown', unlockAudioOnce);
-
-      requestAnimationFrame(gameLoop);
+      game.screen = 'menu';
+      requestAnimationFrame(mainLoop);
     };
   </script>
 </body>
