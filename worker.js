@@ -1,5 +1,6 @@
 const VALID_STATIONS = ['northpoint', 'meifoo', 'admiralty', 'diamondhill', 'kowloontong'];
 const VALID_DIFFS = ['easy', 'normal', 'hard'];
+const VALID_WP_MODES = ['classic7', 'classic5', 'beach'];
 
 function sortEntries(list) {
   return list.sort((a, b) => {
@@ -157,13 +158,15 @@ export default {
 };
 
 // ============================================================================
-// Durable Object：自動分配房主（紅隊）與加入者（藍隊）並轉發即時操作
+// Durable Object：自動分配房主（紅隊）與加入者（藍隊）並同步賽制 (7v7 / 5v5 / 4v4)
 // ============================================================================
 export class WaterPoloRoom {
   constructor(state, env) {
     this.state = state;
     this.host = null;
     this.guest = null;
+    this.subMode = 'classic7'; // 'classic7' (7v7) | 'classic5' (5v5) | 'beach' (4v4)
+    this.hostProfile = null;
   }
 
   async fetch(request) {
@@ -173,10 +176,19 @@ export class WaterPoloRoom {
 
     const url = new URL(request.url);
     let role = url.searchParams.get('role');
+    const queryMode = url.searchParams.get('mode');
+    if (queryMode && VALID_WP_MODES.includes(queryMode)) {
+      this.subMode = queryMode;
+    }
 
     // 清理已斷線嘅舊連線
-    if (this.host && this.host.readyState !== 1) this.host = null;
-    if (this.guest && this.guest.readyState !== 1) this.guest = null;
+    if (this.host && this.host.readyState !== 1) {
+      this.host = null;
+      this.hostProfile = null;
+    }
+    if (this.guest && this.guest.readyState !== 1) {
+      this.guest = null;
+    }
 
     // 如果網址無寫明 role，第一位入房自動做 host（房主），第二位自動做 guest（加入者）
     if (!role) {
@@ -198,7 +210,7 @@ export class WaterPoloRoom {
       this.host = server;
       server.accept();
       this.bindEvents(server, 'host');
-      server.send(JSON.stringify({ type: 'room_created', role: 'host' }));
+      server.send(JSON.stringify({ type: 'room_created', role: 'host', subMode: this.subMode }));
     } else if (role === 'guest') {
       if (!this.host) {
         server.accept();
@@ -216,11 +228,16 @@ export class WaterPoloRoom {
       server.accept();
       this.bindEvents(server, 'guest');
 
-      // 雙方到齊，通知兩邊準備開波！
-      this.host.send(JSON.stringify({ type: 'matched', role: 'host' }));
-      this.host.send(JSON.stringify({ type: 'peer_joined', role: 'host' }));
-      this.guest.send(JSON.stringify({ type: 'matched', role: 'guest' }));
-      this.guest.send(JSON.stringify({ type: 'room_joined', role: 'guest' }));
+      // 雙方到齊，通知兩邊並同步目前選擇嘅賽制（7v7 / 5v5 / 4v4）！
+      this.host.send(JSON.stringify({ type: 'matched', role: 'host', subMode: this.subMode }));
+      this.host.send(JSON.stringify({ type: 'peer_joined', role: 'host', subMode: this.subMode }));
+      this.guest.send(JSON.stringify({ type: 'matched', role: 'guest', subMode: this.subMode }));
+      this.guest.send(JSON.stringify({
+        type: 'room_joined',
+        role: 'guest',
+        subMode: this.subMode,
+        profile: this.hostProfile
+      }));
     } else {
       server.accept();
       server.send(JSON.stringify({ type: 'error', msg: '房間已滿（2/2）' }));
@@ -239,6 +256,16 @@ export class WaterPoloRoom {
           ws.send(JSON.stringify({ type: 'pong', ts: data.ts }));
           return;
         }
+
+        // 紀錄房主最新選擇嘅賽制（classic7 / classic5 / beach）同角色造型，確保後入房嘅好友同步
+        if (role === 'host' && data) {
+          if (data.subMode && VALID_WP_MODES.includes(data.subMode)) {
+            this.subMode = data.subMode;
+          }
+          if (data.profile) {
+            this.hostProfile = data.profile;
+          }
+        }
       } catch (e) {}
 
       if (role === 'host' && this.guest && this.guest.readyState === 1) {
@@ -249,14 +276,16 @@ export class WaterPoloRoom {
     });
 
     const cleanup = () => {
-      if (role === 'host') {
+      if (role === 'host' && this.host === ws) {
         this.host = null;
+        this.hostProfile = null;
+        this.subMode = 'classic7';
         if (this.guest && this.guest.readyState === 1) {
           this.guest.send(JSON.stringify({ type: 'peer_left' }));
           this.guest.close();
           this.guest = null;
         }
-      } else {
+      } else if (role === 'guest' && this.guest === ws) {
         this.guest = null;
         if (this.host && this.host.readyState === 1) {
           this.host.send(JSON.stringify({ type: 'peer_left' }));
