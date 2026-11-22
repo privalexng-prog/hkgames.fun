@@ -11,9 +11,7 @@
       "binding": "LEADERBOARD_KV",
       "id": "cbf8835c79da449fa3fb044acae5b1b6"
     }
-  ]
-}
-  // 👇 新增以下兩段（支援 Cloudflare 免費版 1v1 房間連線）
+  ],
   "durable_objects": {
     "bindings": [
       {
