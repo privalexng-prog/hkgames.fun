@@ -2858,6 +2858,10 @@
         tx = passer.x + (passer.team === 'red' ? 180 : -180);
         ty = passer.y;
       }
+      if (passer.team === 'blue' && !mp.active) {
+        tx += (Math.random() - 0.5) * 75; // 藍隊AI傳波落點偏移（數字越大越易傳失）
+        ty += (Math.random() - 0.5) * 75;
+      }
 
       const dx = tx - ball.x;
       const dy = ty - ball.y;
@@ -2909,10 +2913,13 @@
         else if (mp.remoteKeys.down) cornerBias = 42;
         else cornerBias = (Math.random() - 0.5) * 48;
       } else {
-        cornerBias = (Math.random() - 0.5) * 64;
+        cornerBias = (Math.random() - 0.5) * (shooter.team === 'blue' && !mp.active ? 96 : 64);
       }
 
-      const targetGoalY = Math.max(POOL.goalTop + 10, Math.min(POOL.goalBottom - 10, POOL.centerY + cornerBias));
+      let targetGoalY = Math.max(POOL.goalTop + 10, Math.min(POOL.goalBottom - 10, POOL.centerY + cornerBias));
+      if (shooter.team === 'blue' && !mp.active && Math.random() < 0.25) {
+        targetGoalY = POOL.centerY + (Math.random() < 0.5 ? -74 : 74); // 藍隊AI有 25% 機率射偏出界
+      }
       const dx = targetGoalX - ball.x;
       const dy = targetGoalY - ball.y;
       const dist = Math.max(20, Math.hypot(dx, dy));
@@ -3791,9 +3798,10 @@
         }
 
         const isBlueCPU = p.team === 'blue';
-        const baseSpeed = p.isGK
-          ? (isBlueCPU ? 102 : 113)
+        let baseSpeed = p.isGK
+          ? (isBlueCPU ? 85 : 113)
           : (ball.owner === p ? 139 : 150);
+        if (isBlueCPU && !mp.active) baseSpeed *= 0.82; // 藍隊AI整體游慢 18%（數字越細越慢）
         const speed = isSprinting ? baseSpeed * 1.50 : baseSpeed;
         const targetVx = moveX * speed;
         const targetVy = moveY * speed;
@@ -3869,24 +3877,24 @@
           const timeToGoal = (p.x - ball.x) / ball.vx;
           if (timeToGoal > 0 && timeToGoal < 1.25) {
             p.gkReactTimer = (p.gkReactTimer || 0) + dt;
-            const reactionDelay = isBlueCPU ? 0.14 : 0.11;
+            const reactionDelay = isBlueCPU ? 0.28 : 0.11; // 反應延遲加大（原本 0.14，越大越遲鈍）
             if (p.gkReactTimer < reactionDelay) {
               return { mx: 0, my: 0, sprint: false };
             }
 
-            const aimJitter = Math.sin(game.time * 13 + p.y) * (isBlueCPU ? 20 : 16);
+            const aimJitter = Math.sin(game.time * 13 + p.y) * (isBlueCPU ? 36 : 16); // 預判誤差加大（原本 20）
             const predictedY = ball.y + ball.vy * timeToGoal + aimJitter;
             tx = goalLineX + dirOut * 4;
             ty = Math.max(POOL.goalTop + 10, Math.min(POOL.goalBottom - 10, predictedY));
             sprint = true;
 
             const distToBall = Math.hypot(ball.x - p.x, ball.y - p.y);
-            const diveDist = isBlueCPU ? 72 : 82;
-            const diveTime = isBlueCPU ? 0.16 : 0.19;
+            const diveDist = isBlueCPU ? 52 : 82; // 飛撲感應範圍縮細（原本 72）
+            const diveTime = isBlueCPU ? 0.11 : 0.19; // 臨門一腳先撲（原本 0.16）
             if ((distToBall < diveDist || timeToGoal < diveTime) && p.blockCooldown <= 0 && p.state !== 'block') {
               triggerShotBlock(p);
               const diveDiff = ty - p.y;
-              const maxDiveVy = isBlueCPU ? 118 : 136;
+              const maxDiveVy = isBlueCPU ? 88 : 136; // 飛撲橫移速度減慢（原本 118）
               p.vy = Math.max(-maxDiveVy, Math.min(maxDiveVy, diveDiff * 3.8));
             }
             return { mx: tx - p.x, my: ty - p.y, sprint };
@@ -3963,7 +3971,8 @@
               const desiredCornerOffset = aimCornerY - POOL.centerY;
               p.y += Math.sign(desiredCornerOffset) * 3;
             }
-            const useSkipShot = p.hasFireball || (distToGoal > 165 && Math.random() < 0.68);
+            const skipRate = (p.team === 'blue' && !mp.active) ? 0.22 : 0.68; // 藍隊AI得 22% 用彈水射（原本 0.68）
+            const useSkipShot = p.hasFireball || (distToGoal > 165 && Math.random() < skipRate);
             const charge = useSkipShot
               ? 0.90
               : (0.55 + Math.random() * 0.35);
@@ -4043,7 +4052,7 @@
             const isBehindCarrier = (ballCarrier.facing === 1 && p.x < ballCarrier.x - 10) ||
                                     (ballCarrier.facing === -1 && p.x > ballCarrier.x + 10);
             if (!isBehindCarrier && distToCarrier < 66 && p.state === 'swim' && ballCarrier.stealImmunityTimer <= 0) {
-              if (Math.random() < 0.11) {
+              if (Math.random() < (p.team === 'blue' && !mp.active ? 0.04 : 0.11)) { // 飛撲頻率減低（原本 0.11）
                 p.state = 'dive';
                 p.stateTimer = 0.28;
                 const ang = Math.atan2(ballCarrier.y - p.y, ballCarrier.x - p.x);
@@ -4135,6 +4144,10 @@
               } else if (tacklerSpeed > 135 && isFromBehind && Math.random() < 0.22) {
                 triggerOrdinaryFoul(carrier.x, carrier.y, carrier.team, '阻擋犯規！防守退開1米');
               } else if (tacklerSpeed > 100 || tackler.state === 'block' || tackler.state === 'dive') {
+                if (tackler.team === 'blue' && !mp.active && Math.random() < 0.40) {
+                  carrier.stealImmunityTimer = 0.5; // 藍隊AI有 40% 機率搶波失敗
+                  return;
+                }
                 giveBallTo(tackler, true);
                 tackler.steals++;
                 if (tackler === game.controlledPlayer) {
