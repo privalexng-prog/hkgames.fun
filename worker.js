@@ -113,6 +113,70 @@ async function handleLeaderboard(request, env) {
   return new Response(JSON.stringify({ ok: false, error: 'Method Not Allowed' }), { status: 405, headers: corsHeaders });
 }
 
+// ============================================================================
+// 水球大亂鬥 1v1 連線建立房間 API
+// ============================================================================
+async function handleWaterPoloCreate(request, env) {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json; charset=utf-8'
+  };
+
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!env.WATERPOLO_ROOM) {
+    return new Response(
+      JSON.stringify({ ok: false, error: '尚未綁定 WATERPOLO_ROOM Durable Object' }),
+      { status: 500, headers: corsHeaders }
+    );
+  }
+
+  let roomCode = '';
+  for (let i = 0; i < 12; i++) {
+    const candidate = String(Math.floor(1000 + Math.random() * 9000));
+    const id = env.WATERPOLO_ROOM.idFromName(candidate);
+    const stub = env.WATERPOLO_ROOM.get(id);
+    const res = await stub.fetch('https://internal/status');
+    const { active } = await res.json();
+    if (!active) {
+      roomCode = candidate;
+      break;
+    }
+  }
+
+  if (!roomCode) {
+    return new Response(
+      JSON.stringify({ ok: false, error: '房間暫時爆滿，請稍後重試' }),
+      { status: 503, headers: corsHeaders }
+    );
+  }
+
+  return new Response(JSON.stringify({ ok: true, room: roomCode }), { headers: corsHeaders });
+}
+
+// ============================================================================
+// 水球大亂鬥 1v1 連線 WebSocket 路由
+// ============================================================================
+async function handleWaterPoloWS(request, env) {
+  if (!env.WATERPOLO_ROOM) {
+    return new Response('尚未綁定 WATERPOLO_ROOM', { status: 500 });
+  }
+
+  const url = new URL(request.url);
+  const roomCode = url.searchParams.get('room');
+  if (!roomCode || !/^\d{4}$/.test(roomCode)) {
+    return new Response('無效的 4 位房間編號', { status: 400 });
+  }
+
+  const id = env.WATERPOLO_ROOM.idFromName(roomCode);
+  const stub = env.WATERPOLO_ROOM.get(id);
+  return stub.fetch(request);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -121,6 +185,115 @@ export default {
       return handleLeaderboard(request, env);
     }
 
+    if (url.pathname === '/api/waterpolo/create') {
+      return handleWaterPoloCreate(request, env);
+    }
+
+    if (url.pathname === '/api/waterpolo/ws') {
+      return handleWaterPoloWS(request, env);
+    }
+
     return env.ASSETS.fetch(request);
   }
 };
+
+// ============================================================================
+// Durable Object：管理單一 4 位房間號內嘅 1v1 玩家配對與低延遲封包轉發
+// ============================================================================
+export class WaterPoloRoom {
+  constructor(state, env) {
+    this.state = state;
+    this.host = null;
+    this.guest = null;
+  }
+
+  async fetch(request) {
+    const url = new URL(request.url);
+
+    if (url.pathname === '/status') {
+      return new Response(JSON.stringify({ active: Boolean(this.host || this.guest) }));
+    }
+
+    if (request.headers.get('Upgrade') !== 'websocket') {
+      return new Response('Expected WebSocket', { status: 426 });
+    }
+
+    const role = url.searchParams.get('role'); // 'host' 或 'guest'
+    const pair = new WebSocketPair();
+    const [client, server] = Object.values(pair);
+
+    if (role === 'host') {
+      if (this.host) {
+        server.accept();
+        server.send(JSON.stringify({ type: 'error', msg: '此房間已有房主' }));
+        server.close(1008, 'Host exists');
+        return new Response(null, { status: 101, webSocket: client });
+      }
+      this.host = server;
+      server.accept();
+      this.bindEvents(server, 'host');
+    } else {
+      if (!this.host) {
+        server.accept();
+        server.send(JSON.stringify({ type: 'error', msg: '找不到房間或房主已離開' }));
+        server.close(1008, 'Room not found');
+        return new Response(null, { status: 101, webSocket: client });
+      }
+      if (this.guest) {
+        server.accept();
+        server.send(JSON.stringify({ type: 'error', msg: '房間已滿（2/2）' }));
+        server.close(1008, 'Room full');
+        return new Response(null, { status: 101, webSocket: client });
+      }
+      this.guest = server;
+      server.accept();
+      this.bindEvents(server, 'guest');
+
+      // 雙方到齊，通知開波！
+      this.host.send(JSON.stringify({ type: 'matched' }));
+      this.guest.send(JSON.stringify({ type: 'matched' }));
+    }
+
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  bindEvents(ws, role) {
+    ws.addEventListener('message', (event) => {
+      // 支援 PING 延遲測試
+      try {
+        const data = JSON.parse(event.data);
+        if (data && data.type === 'ping') {
+          ws.send(JSON.stringify({ type: 'pong', ts: data.ts }));
+          return;
+        }
+      } catch (e) {
+        // 非 JSON 封包照常轉發
+      }
+
+      if (role === 'host' && this.guest && this.guest.readyState === 1) {
+        this.guest.send(event.data);
+      } else if (role === 'guest' && this.host && this.host.readyState === 1) {
+        this.host.send(event.data);
+      }
+    });
+
+    const cleanup = () => {
+      if (role === 'host') {
+        this.host = null;
+        if (this.guest && this.guest.readyState === 1) {
+          this.guest.send(JSON.stringify({ type: 'peer_left' }));
+          this.guest.close();
+          this.guest = null;
+        }
+      } else {
+        this.guest = null;
+        if (this.host && this.host.readyState === 1) {
+          this.host.send(JSON.stringify({ type: 'peer_left' }));
+        }
+      }
+    };
+
+    ws.addEventListener('close', cleanup);
+    ws.addEventListener('error', cleanup);
+  }
+}
