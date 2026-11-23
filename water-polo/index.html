@@ -1026,7 +1026,7 @@
                   <span class="mode-badge classic">7v7 奧運</span>
                 </div>
                 <div class="mode-desc">
-                  6名場上球員 + 1名守門員｜30秒進攻時限｜節間休息5秒、中線衝波、紅旗趕出場15秒及五米點球大戰！
+                  6名場上球員 + 1名守門員｜30秒進攻時限｜節間休息5秒、中線衝波、紅旗趕出場15秒及打和互射五碼！
                 </div>
               </div>
 
@@ -1036,7 +1036,7 @@
                   <span class="mode-badge classic">5v5 經典</span>
                 </div>
                 <div class="mode-desc">
-                  4名場上球員 + 1名守門員｜30秒進攻時限｜走位空間更開闊、節奏爽快的 5 人制水球賽！
+                  4名場上球員 + 1名守門員｜30秒進攻時限｜走位空間更開闊、節奏爽快，打和進入互射五碼決勝！
                 </div>
               </div>
 
@@ -1046,7 +1046,7 @@
                   <span class="mode-badge">4v4 狂熱</span>
                 </div>
                 <div class="mode-desc">
-                  海上充氣浮台球場｜15秒極速進攻｜海浪推力、加速渦輪、巨型沙灘波及「烈焰彈水必殺射門」道具！
+                  海上充氣浮台球場｜15秒極速進攻｜海浪推力、加速渦輪、巨型沙灘波及「烈焰彈水必殺射門」！
                 </div>
               </div>
 
@@ -1056,7 +1056,7 @@
                   <span class="mode-badge" style="background:#10b981;">1v1 連線</span>
                 </div>
                 <div class="mode-desc">
-                  輸入 4 位房間編號與好友即時連線對決！可自由選擇 7v7 / 5v5 / 4v4 賽制，房主控紅隊、加入者控藍隊！
+                  輸入 4 位房間編號與好友即時連線對決！支援 7v7 / 5v5 / 4v4 賽制及打和互射五碼，房主控紅隊、加入者控藍隊！
                 </div>
               </div>
 
@@ -1164,6 +1164,9 @@
             <br>• <b>普通犯規</b>：輕微阻擋吹罰自由球，防守方須退開 1 米。
             <br>• <b>嚴重犯規（紅旗趕出場）</b>：背後高速衝撞拉扯，犯規者須游往角落罰時區停賽 <b>15 秒</b>（以多打少 Power Play）！
             <br>• <b>五米極刑罰球</b>：在 5 米線內面對龍門遭背後犯規，直接判罰 <b>1 對 1 五米點球大戰</b>！
+          </li>
+          <li><b>打和互射五碼（5m Shootout）</b>：
+            <br>• 任何模式若法定時間結束打和，立即進入<b>互射五碼大戰</b>！雙方輪流主射及守龍門（5 輪後若仍打和即進入突然死亡階段）。
           </li>
         </ul>
         <button id="btn-close-help" class="start-btn" style="font-size:14px;padding:8px;">明白！返去球場</button>
@@ -1881,7 +1884,7 @@
     };
 
     const game = {
-      screen: 'menu',
+      screen: 'menu', // 'menu' | 'countdown' | 'playing' | 'period_break' | 'penalty_shot' | 'shootout' | 'goal_celeb' | 'summary'
       mode: 'classic7',
       effectiveRules: 'classic7', // 'classic7' | 'classic5' | 'beach'
       time: 0,
@@ -1928,6 +1931,26 @@
         aiShootTimer: 1.4,
         shotTaken: false
       },
+      shootout: {
+        active: false,
+        round: 1,
+        turnTeam: 'red',
+        phase: 'intro', // 'intro' | 'aiming' | 'flying' | 'result'
+        phaseTimer: 2.2,
+        shotTimer: 8.0,
+        aiShootTimer: 1.5,
+        shotTaken: false,
+        shooter: null,
+        gk: null,
+        redGoals: 0,
+        blueGoals: 0,
+        redResults: [],
+        blueResults: [],
+        shooterIdxRed: 0,
+        shooterIdxBlue: 0,
+        lastOutcomeText: '',
+        lastOutcomeColor: '#ffd541'
+      },
       ripples: [],
       splashes: [],
       confetti: [],
@@ -1935,13 +1958,12 @@
       floatingTexts: [],
       referee: {
         x: POOL.centerX,
-        y: POOL.top - 28,
+        y: POOL.top - 26,
         targetX: POOL.centerX,
         whistleTimer: 0,
         gesture: 'run',
         flagColor: '#ffffff'
       },
-      spectators: [],
       celebTimer: 0,
       slowMoTimer: 0,
       lastScorer: null,
@@ -1967,7 +1989,7 @@
       ws: null,
       roomCode: '',
       role: 'host',
-      subMode: 'classic7', // 'classic7' | 'classic5' | 'beach'
+      subMode: 'classic7',
       opponentConnected: false,
       opponentProfile: {
         name: '藍隊挑戰者',
@@ -2181,12 +2203,20 @@
         }
         document.getElementById('mp-modal').classList.add('hidden');
         startMatch('online1v1', true);
+      } else if (msg.type === 'rematch_request' && mp.role === 'host') {
+        document.getElementById('summary-score-line').textContent = '🔥 對手請求再戰一場！按下方按鈕開波！';
+        audio.sfxPowerup();
       } else if (msg.type === 'input' && mp.role === 'host') {
         if (msg.keys) {
           mp.remoteKeys = { ...mp.remoteKeys, ...msg.keys };
         }
       } else if (msg.type === 'state' && mp.role === 'guest') {
         applyAuthoritativeSnapshot(msg.state);
+      } else if (msg.type === 'match_over' && mp.role === 'guest') {
+        applyAuthoritativeSnapshot(msg.state);
+        if (game.screen !== 'summary') {
+          finishMatch();
+        }
       }
     }
 
@@ -2209,6 +2239,20 @@
           active: game.penaltyState.active,
           attackingTeam: game.penaltyState.attackingTeam,
           timer: game.penaltyState.timer
+        },
+        shootout: {
+          active: game.shootout.active,
+          round: game.shootout.round,
+          turnTeam: game.shootout.turnTeam,
+          phase: game.shootout.phase,
+          shotTimer: game.shootout.shotTimer,
+          shotTaken: game.shootout.shotTaken,
+          redGoals: game.shootout.redGoals,
+          blueGoals: game.shootout.blueGoals,
+          redResults: [...game.shootout.redResults],
+          blueResults: [...game.shootout.blueResults],
+          lastOutcomeText: game.shootout.lastOutcomeText,
+          lastOutcomeColor: game.shootout.lastOutcomeColor
         },
         ball: {
           x: Math.round(game.ball.x),
@@ -2256,11 +2300,19 @@
       game.swimOffActive = snap.swimOffActive;
       game.goalBannerText = snap.goalBannerText || '';
 
-      if (snap.screen === 'goal_celeb' && prevScreen !== 'goal_celeb') {
-        audio.sfxGoal();
-        spawnConfetti();
-      } else if (snap.screen === 'summary' && prevScreen !== 'summary') {
-        finishMatch();
+      if (snap.shootout) {
+        game.shootout.active = snap.shootout.active;
+        game.shootout.round = snap.shootout.round;
+        game.shootout.turnTeam = snap.shootout.turnTeam;
+        game.shootout.phase = snap.shootout.phase;
+        game.shootout.shotTimer = snap.shootout.shotTimer;
+        game.shootout.shotTaken = snap.shootout.shotTaken;
+        game.shootout.redGoals = snap.shootout.redGoals;
+        game.shootout.blueGoals = snap.shootout.blueGoals;
+        game.shootout.redResults = snap.shootout.redResults || [];
+        game.shootout.blueResults = snap.shootout.blueResults || [];
+        game.shootout.lastOutcomeText = snap.shootout.lastOutcomeText || '';
+        game.shootout.lastOutcomeColor = snap.shootout.lastOutcomeColor || '#ffd541';
       }
 
       if (snap.penalty) {
@@ -2312,22 +2364,12 @@
           }
         }
       }
-    }
 
-    function initSpectators() {
-      game.spectators = [];
-      const shirtColors = ['#ef4444', '#3b82f6', '#facc15', '#10b981', '#f97316', '#ec4899', '#8b5cf6'];
-      const skinColors = ['#ffcdb2', '#e09f67', '#f1b980', '#8d5524'];
-      for (let x = 152; x <= LOGICAL_W - 152; x += 26) {
-        game.spectators.push({
-          x,
-          y: 78 + (x % 52 === 0 ? 0 : 8),
-          color: shirtColors[(x / 26) % shirtColors.length],
-          skin: skinColors[(x / 26) % skinColors.length],
-          phase: x * 0.04,
-          hasFlag: (x % 78 === 0),
-          flagColor: (x % 156 === 0) ? '#ef4444' : '#3b82f6'
-        });
+      if (snap.screen === 'goal_celeb' && prevScreen !== 'goal_celeb') {
+        audio.sfxGoal();
+        spawnConfetti();
+      } else if (snap.screen === 'summary' && prevScreen !== 'summary') {
+        finishMatch();
       }
     }
 
@@ -2396,7 +2438,6 @@
       const homeAiNames = ['肥康', '費高奧懷利', '般奴雲度斯', '旺財', '龜仔明', '咖喱仔'];
       const awayAiNames = ['懷斯', '雪糕仔', '大笨象', 'D朗', 'CN仔', '大石頭'];
 
-      // Red Team (Host / Player 1 Team - Attacks Right ->)
       const redPool = is7v7 ? homeAiNames : pickShuffledNames(homeAiNames, 6);
       const redNames = ['門神輝', playerProfile.name || '香港飛魚', ...redPool];
       let redFormation;
@@ -2461,7 +2502,6 @@
         });
       });
 
-      // Blue Team (CPU Opponent or Guest P2 in 1v1 Online Mode - Attacks Left <-)
       const bluePool = is7v7 ? awayAiNames : pickShuffledNames(awayAiNames, 6);
       const guestCustomName = isOnline1v1 ? (mp.opponentProfile.name || '藍隊挑戰者') : bluePool[0];
       const blueNames = ['鐵壁龍', ...(isOnline1v1 ? [guestCustomName, ...bluePool] : bluePool)];
@@ -2736,6 +2776,11 @@
       game.floatingTexts = [];
       game.powerups = [];
       game.powerupSpawnTimer = 4;
+      game.shootout.active = false;
+      game.shootout.redResults = [];
+      game.shootout.blueResults = [];
+      game.shootout.redGoals = 0;
+      game.shootout.blueGoals = 0;
 
       if (effectiveRules === 'beach') {
         game.beachBall = { active: true, x: POOL.centerX, y: POOL.top + 70, vx: 56, vy: 44, r: 24 };
@@ -2859,7 +2904,7 @@
         ty = passer.y;
       }
       if (passer.team === 'blue' && !mp.active) {
-        tx += (Math.random() - 0.5) * 55; // 藍隊AI傳波落點偏移（數字越大越易傳失）
+        tx += (Math.random() - 0.5) * 55;
         ty += (Math.random() - 0.5) * 55;
       }
 
@@ -2917,8 +2962,8 @@
       }
 
       let targetGoalY = Math.max(POOL.goalTop + 10, Math.min(POOL.goalBottom - 10, POOL.centerY + cornerBias));
-      if (shooter.team === 'blue' && !mp.active && Math.random() < 0.15) {
-        targetGoalY = POOL.centerY + (Math.random() < 0.5 ? -74 : 74); // 藍隊AI有 25% 機率射偏出界
+      if (shooter.team === 'blue' && !mp.active && game.screen !== 'shootout' && Math.random() < 0.15) {
+        targetGoalY = POOL.centerY + (Math.random() < 0.5 ? -74 : 74);
       }
       const dx = targetGoalX - ball.x;
       const dy = targetGoalY - ball.y;
@@ -2941,11 +2986,15 @@
 
       if (game.screen === 'penalty_shot') {
         game.penaltyState.shotTaken = true;
+      } else if (game.screen === 'shootout') {
+        game.shootout.shotTaken = true;
+        game.shootout.phase = 'flying';
+        game.shootout.phaseTimer = 2.4;
       }
     }
 
     function triggerShotBlock(defender) {
-      if (!defender || (defender.isGK && game.screen === 'penalty_shot' && defender.state === 'block')) return;
+      if (!defender || (defender.isGK && (game.screen === 'penalty_shot' || game.screen === 'shootout') && defender.state === 'block')) return;
       if (defender.blockCooldown > 0 || defender.state === 'block' || defender.sinBinTimer > 0) return;
 
       defender.state = 'block';
@@ -2984,7 +3033,7 @@
     }
 
     // ============================================================================
-    // 7. THREE-TIER REFEREE FOUL & PENALTY SYSTEM (ORDINARY, SIN BIN, 5M PENALTY)
+    // 7. THREE-TIER REFEREE FOUL, 5M PENALTY & 5M PENALTY SHOOTOUT SYSTEM
     // ============================================================================
     function triggerOrdinaryFoul(fx, fy, awardedTeam, reasonText = '普通犯規！自由球') {
       audio.sfxWhistle(false);
@@ -3104,10 +3153,365 @@
       spawnFloatingText(POOL.centerX, POOL.centerY - 50, '🚨 五米極刑罰球！1 對 1 對決！', '#ffd541');
     }
 
+    function startShootout() {
+      audio.sfxWhistle(true);
+      game.screen = 'shootout';
+      game.penaltyState.active = false;
+      game.shootout = {
+        active: true,
+        round: 1,
+        turnTeam: 'red',
+        phase: 'intro',
+        phaseTimer: 2.2,
+        shotTimer: 8.0,
+        aiShootTimer: 1.5,
+        shotTaken: false,
+        shooter: null,
+        gk: null,
+        redGoals: 0,
+        blueGoals: 0,
+        redResults: [],
+        blueResults: [],
+        shooterIdxRed: 0,
+        shooterIdxBlue: 0,
+        lastOutcomeText: '',
+        lastOutcomeColor: '#ffd541'
+      };
+      game.referee.gesture = 'penalty';
+      game.referee.whistleTimer = 2.2;
+
+      // Immediately place the ball in the first shooter's hand at the 5m line
+      const firstShooter = game.players.find(p => p.team === 'red' && !p.isGK);
+      if (firstShooter) {
+        firstShooter.x = POOL.right - POOL.fiveMeterDist;
+        firstShooter.y = POOL.centerY;
+        firstShooter.facing = 1;
+        game.shootout.shooter = firstShooter;
+        giveBallTo(firstShooter, false);
+        game.ball.x = firstShooter.x + firstShooter.facing * 16;
+        game.ball.y = firstShooter.y + 4;
+        game.ball.z = 2;
+      }
+
+      spawnFloatingText(POOL.centerX, POOL.centerY - 40, '⚖️ 打和！進入互射五碼決勝負！', '#ffd541');
+      if (mp.active && mp.role === 'host') {
+        sendMpMessage({ type: 'state', state: buildAuthoritativeSnapshot() });
+      }
+    }
+
+    function prepareShootoutTurn() {
+      const so = game.shootout;
+      const team = so.turnTeam;
+      const defTeam = team === 'red' ? 'blue' : 'red';
+
+      game.players.forEach(p => {
+        p.sinBinTimer = 0;
+        p.state = 'swim';
+        p.stateTimer = 0;
+        p.blockCooldown = 0;
+        p.actionCooldown = 0;
+        p.vx = 0;
+        p.vy = 0;
+      });
+
+      const fieldShooters = game.players.filter(p => p.team === team && !p.isGK);
+      let shooter;
+      if (team === 'red') {
+        shooter = fieldShooters[so.shooterIdxRed % fieldShooters.length];
+        so.shooterIdxRed++;
+      } else {
+        shooter = fieldShooters[so.shooterIdxBlue % fieldShooters.length];
+        so.shooterIdxBlue++;
+      }
+
+      const gk = game.players.find(p => p.team === defTeam && p.isGK);
+      if (!shooter || !gk) return;
+
+      const fiveLineX = team === 'red'
+        ? POOL.right - POOL.fiveMeterDist
+        : POOL.left + POOL.fiveMeterDist;
+
+      shooter.x = fiveLineX;
+      shooter.y = POOL.centerY;
+      shooter.facing = team === 'red' ? 1 : -1;
+
+      gk.x = team === 'red' ? POOL.right - 20 : POOL.left + 20;
+      gk.y = POOL.centerY;
+      gk.facing = team === 'red' ? -1 : 1;
+
+      let topCount = 0;
+      let botCount = 0;
+      game.players.forEach(p => {
+        if (p === shooter || p === gk) return;
+        if (p.team === 'red') {
+          p.x = POOL.left + 120 + topCount * 58;
+          p.y = POOL.top + 20;
+          p.facing = 1;
+          topCount++;
+        } else {
+          p.x = POOL.left + 120 + botCount * 58;
+          p.y = POOL.bottom - 20;
+          p.facing = -1;
+          botCount++;
+        }
+      });
+
+      // Lock the ball directly into the shooter's hand and sync coordinates immediately
+      giveBallTo(shooter, true);
+      game.ball.owner = shooter;
+      game.ball.x = shooter.x + shooter.facing * 16;
+      game.ball.y = shooter.y + 4;
+      game.ball.z = 2;
+      game.ball.trail = [];
+
+      so.shooter = shooter;
+      so.gk = gk;
+      so.phase = 'aiming';
+      so.shotTimer = 8.0;
+      so.aiShootTimer = 1.2 + Math.random() * 0.55;
+      so.shotTaken = false;
+
+      if (team === 'red') {
+        game.controlledPlayer = shooter;
+        if (mp.active) mp.blueControlledPlayer = gk;
+      } else {
+        game.controlledPlayer = gk;
+        if (mp.active) mp.blueControlledPlayer = shooter;
+      }
+
+      audio.sfxWhistle(false);
+    }
+
+    function completeShootoutAttempt(isGoal, outcomeText) {
+      const so = game.shootout;
+      if (so.phase === 'result') return;
+
+      so.phase = 'result';
+      so.phaseTimer = 1.8;
+      so.lastOutcomeText = outcomeText;
+      so.lastOutcomeColor = isGoal ? '#38e54d' : '#ff4b5c';
+
+      game.ball.isShot = false;
+      game.ball.isSkipShot = false;
+      game.ball.isFireShot = false;
+
+      if (so.turnTeam === 'red') {
+        so.redResults.push(isGoal ? 'goal' : 'miss');
+        if (isGoal) {
+          so.redGoals++;
+          game.scoreRed++;
+          if (so.shooter) {
+            so.shooter.goals++;
+            if (so.shooter.id === 'red_1') game.stats.goals++;
+          }
+        }
+      } else {
+        so.blueResults.push(isGoal ? 'goal' : 'miss');
+        if (isGoal) {
+          so.blueGoals++;
+          game.scoreBlue++;
+          if (so.shooter) {
+            so.shooter.goals++;
+          }
+        }
+      }
+
+      if (isGoal) {
+        audio.sfxGoal();
+        spawnConfetti();
+        spawnSplash(game.ball.x, game.ball.y, 22, 1.4, '#ffd541');
+      } else {
+        audio.sfxBlock();
+        spawnSplash(game.ball.x, game.ball.y, 12, 0.9, '#ffffff');
+      }
+    }
+
+    function isShootoutDecided() {
+      const so = game.shootout;
+      const rTaken = so.redResults.length;
+      const bTaken = so.blueResults.length;
+
+      if (so.round <= 5) {
+        const rRem = 5 - rTaken;
+        const bRem = 5 - bTaken;
+        if (so.redGoals > so.blueGoals + bRem) return true;
+        if (so.blueGoals > so.redGoals + rRem) return true;
+        if (rTaken === 5 && bTaken === 5 && so.redGoals !== so.blueGoals) return true;
+        return false;
+      } else {
+        return rTaken === bTaken && so.redGoals !== so.blueGoals;
+      }
+    }
+
+    function updateShootout(dt) {
+      const so = game.shootout;
+
+      if (so.phase === 'intro') {
+        if (so.shooter) {
+          game.ball.owner = so.shooter;
+          game.ball.x = so.shooter.x + so.shooter.facing * 16;
+          game.ball.y = so.shooter.y + 4;
+          game.ball.z = 2;
+        }
+        so.phaseTimer -= dt;
+        if (so.phaseTimer <= 0) {
+          prepareShootoutTurn();
+        }
+        return;
+      }
+
+      if (so.phase === 'result') {
+        so.phaseTimer -= dt;
+        if (so.phaseTimer <= 0) {
+          if (isShootoutDecided()) {
+            finishMatch();
+          } else {
+            if (so.turnTeam === 'red') {
+              so.turnTeam = 'blue';
+            } else {
+              so.turnTeam = 'red';
+              so.round++;
+            }
+            prepareShootoutTurn();
+          }
+        }
+        return;
+      }
+
+      const shooter = so.shooter;
+      const gk = so.gk;
+      if (!shooter || !gk) return;
+
+      if (gk.stateTimer > 0) {
+        gk.stateTimer -= dt;
+        if (gk.stateTimer <= 0) {
+          gk.state = 'swim';
+          gk.blockCooldown = 0.45;
+        }
+      }
+      if (gk.blockCooldown > 0) gk.blockCooldown = Math.max(0, gk.blockCooldown - dt);
+
+      if (so.phase === 'aiming' && !so.shotTaken) {
+        so.shotTimer -= dt;
+
+        // Guarantee the ball remains held in the shooter's hand while aiming
+        if (game.ball.owner !== shooter) {
+          game.ball.owner = shooter;
+        }
+        shooter.facing = so.turnTeam === 'red' ? 1 : -1;
+        game.ball.x = shooter.x + shooter.facing * 16;
+        game.ball.y = shooter.y + 4;
+        game.ball.z = 2;
+        game.ball.vx = 0;
+        game.ball.vy = 0;
+        game.ball.vz = 0;
+
+        if (so.turnTeam === 'red') {
+          // Red shoots (Host / Solo P1)
+          const moveY = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
+          shooter.y = Math.max(POOL.centerY - 46, Math.min(POOL.centerY + 46, shooter.y + moveY * 80 * dt));
+          game.ball.x = shooter.x + shooter.facing * 16;
+          game.ball.y = shooter.y + 4;
+          handleHumanInput(dt);
+
+          // Blue defends (Guest P2 or AI GK)
+          if (mp.active) {
+            const gkMoveY = (mp.remoteKeys.down ? 1 : 0) - (mp.remoteKeys.up ? 1 : 0);
+            gk.vy = gkMoveY * 155;
+            gk.y = Math.max(POOL.goalTop + 8, Math.min(POOL.goalBottom - 8, gk.y + gk.vy * dt));
+            if (mp.remoteKeys.shoot && gk.blockCooldown <= 0 && gk.state !== 'block') {
+              triggerShotBlock(gk);
+            }
+          } else {
+            const aiY = POOL.centerY + Math.sin(game.time * 6.5) * 40;
+            gk.y += (aiY - gk.y) * Math.min(1, dt * 5.5);
+            gk.y = Math.max(POOL.goalTop + 8, Math.min(POOL.goalBottom - 8, gk.y));
+          }
+
+          if (so.shotTimer <= 0) {
+            completeShootoutAttempt(false, '⏱️ 主射超時！射失！');
+            return;
+          }
+        } else {
+          // Blue shoots (Guest P2 or AI)
+          if (mp.active) {
+            const moveY = (mp.remoteKeys.down ? 1 : 0) - (mp.remoteKeys.up ? 1 : 0);
+            shooter.y = Math.max(POOL.centerY - 46, Math.min(POOL.centerY + 46, shooter.y + moveY * 80 * dt));
+            game.ball.x = shooter.x + shooter.facing * 16;
+            game.ball.y = shooter.y + 4;
+            handleHumanInput(dt);
+          } else {
+            so.aiShootTimer -= dt;
+            if (so.aiShootTimer <= 0) {
+              shooter.y = POOL.centerY + (Math.random() < 0.5 ? -36 : 36);
+              game.ball.x = shooter.x + shooter.facing * 16;
+              game.ball.y = shooter.y + 4;
+              executeShot(shooter, 0.72 + Math.random() * 0.25);
+            }
+          }
+
+          // Red defends (Host / Solo P1 GK)
+          const gkMoveY = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
+          gk.vy = gkMoveY * 155;
+          gk.y = Math.max(POOL.goalTop + 8, Math.min(POOL.goalBottom - 8, gk.y + gk.vy * dt));
+          if (keys.shoot && gk.blockCooldown <= 0 && gk.state !== 'block') {
+            triggerShotBlock(gk);
+          }
+
+          if (so.shotTimer <= 0) {
+            completeShootoutAttempt(false, '⏱️ 主射超時！射失！');
+            return;
+          }
+        }
+      } else if (so.phase === 'flying') {
+        so.phaseTimer -= dt;
+
+        // If AI GK is defending in solo mode during flight, attempt dive
+        if (so.turnTeam === 'red' && !mp.active && game.ball.isShot) {
+          gk.y += (game.ball.y - gk.y) * Math.min(1, dt * 4.2);
+          gk.y = Math.max(POOL.goalTop + 8, Math.min(POOL.goalBottom - 8, gk.y));
+          if (Math.abs(game.ball.x - gk.x) < 62 && gk.blockCooldown <= 0 && gk.state !== 'block' && Math.random() < 0.14) {
+            triggerShotBlock(gk);
+          }
+        }
+
+        // Allow human GK to move & dive during flight
+        if (so.turnTeam === 'blue') {
+          const gkMoveY = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
+          gk.vy = gkMoveY * 155;
+          gk.y = Math.max(POOL.goalTop + 8, Math.min(POOL.goalBottom - 8, gk.y + gk.vy * dt));
+          if (keys.shoot && gk.blockCooldown <= 0 && gk.state !== 'block') {
+            triggerShotBlock(gk);
+          }
+        } else if (mp.active) {
+          const gkMoveY = (mp.remoteKeys.down ? 1 : 0) - (mp.remoteKeys.up ? 1 : 0);
+          gk.vy = gkMoveY * 155;
+          gk.y = Math.max(POOL.goalTop + 8, Math.min(POOL.goalBottom - 8, gk.y + gk.vy * dt));
+          if (mp.remoteKeys.shoot && gk.blockCooldown <= 0 && gk.state !== 'block') {
+            triggerShotBlock(gk);
+          }
+        }
+
+        updateBall(dt);
+
+        if (so.phase === 'flying') {
+          if (game.ball.owner === gk) {
+            completeShootoutAttempt(false, '🧤 門神神救！SAVE！');
+          } else if (!game.ball.isShot || so.phaseTimer <= 0) {
+            completeShootoutAttempt(false, '💦 射門不入！MISS！');
+          }
+        }
+      }
+    }
+
     // ============================================================================
     // 8. GOAL SCORED SEQUENCE
     // ============================================================================
     function handleGoalScored(scoringTeam) {
+      if (game.screen === 'shootout') {
+        completeShootoutAttempt(true, '⚽ 五碼破網！！GOAL！');
+        return;
+      }
       if (game.screen === 'goal_celeb') return;
 
       if (scoringTeam === 'red') {
@@ -3166,12 +3570,18 @@
     }
 
     // ============================================================================
-    // 9. END OF MATCH & SUMMARY SCREEN
+    // 9. END OF MATCH & SUMMARY SCREEN (BOTH HOME & AWAY TEAMS IN 1V1)
     // ============================================================================
     function finishMatch() {
       game.screen = 'summary';
+      game.shootout.active = false;
       audio.stopBGM();
       audio.sfxWhistle(true);
+
+      // Broadcast final match_over state immediately if Host in 1v1 mode
+      if (mp.active && mp.role === 'host') {
+        sendMpMessage({ type: 'match_over', state: buildAuthoritativeSnapshot() });
+      }
 
       const isGuest = mp.active && mp.role === 'guest';
       const myTeamWon = isGuest ? (game.scoreBlue > game.scoreRed) : (game.scoreRed > game.scoreBlue);
@@ -3201,8 +3611,12 @@
       careerRecords.totalGoals += displayGoals;
       saveRecords();
 
+      const hasShootout = game.shootout.redResults.length > 0 || game.shootout.blueResults.length > 0;
+      const shootoutSuffix = hasShootout
+        ? `（互射五碼 ${game.shootout.redGoals}:${game.shootout.blueGoals}）`
+        : '';
       document.getElementById('summary-score-line').textContent =
-        `紅隊（主場） ${game.scoreRed}  -  ${game.scoreBlue}  藍隊（客隊）`;
+        `紅隊（主場） ${game.scoreRed}  -  ${game.scoreBlue}  藍隊（客隊）${shootoutSuffix}`;
 
       let mvp = game.players[0];
       let bestMvpScore = -1;
@@ -3313,6 +3727,18 @@
         return;
       }
 
+      if (game.screen === 'shootout') {
+        updateShootout(dt);
+        if (mp.active && mp.role === 'host' && game.screen === 'shootout') {
+          mp.syncTimer += dt;
+          if (mp.syncTimer >= 0.04) {
+            mp.syncTimer = 0;
+            sendMpMessage({ type: 'state', state: buildAuthoritativeSnapshot() });
+          }
+        }
+        return;
+      }
+
       game.periodTime -= dt;
       if (game.periodTime <= 0) {
         if (game.period < game.maxPeriods) {
@@ -3327,9 +3753,17 @@
           game.referee.gesture = 'whistle';
           game.referee.whistleTimer = 2.0;
           audio.sfxWhistle(true);
+          if (mp.active && mp.role === 'host') {
+            sendMpMessage({ type: 'state', state: buildAuthoritativeSnapshot() });
+          }
           return;
         } else {
-          finishMatch();
+          // End of regulation: if tied in ANY mode, enter 5-Meter Penalty Shootout!
+          if (game.scoreRed === game.scoreBlue) {
+            startShootout();
+          } else {
+            finishMatch();
+          }
           return;
         }
       }
@@ -3667,19 +4101,20 @@
 
       const isOffense = game.ball.owner && game.ball.owner.team === team;
       const canActWithBall = timers.possessionBufferTimer <= 0 && p.actionCooldown <= 0;
+      const isSetPiece = game.screen === 'penalty_shot' || game.screen === 'shootout';
 
       if (ctrlKeys.pass) {
         if (!timers.passWasPressed) {
           timers.passWasPressed = true;
           timers.passHeldTime = 0;
-          if (!isOffense && game.screen !== 'penalty_shot') {
+          if (!isOffense && !isSetPiece) {
             switchDefender(team);
           }
         } else {
           timers.passHeldTime += dt;
         }
       } else if (timers.passWasPressed) {
-        if (game.ball.owner === p && canActWithBall && game.screen !== 'penalty_shot') {
+        if (game.ball.owner === p && canActWithBall && !isSetPiece) {
           const isLob = timers.passHeldTime >= 0.24;
           executePass(p, isLob);
         }
@@ -3801,7 +4236,7 @@
         let baseSpeed = p.isGK
           ? (isBlueCPU ? 85 : 113)
           : (ball.owner === p ? 139 : 150);
-        if (isBlueCPU && !mp.active) baseSpeed *= 0.90; // 藍隊AI整體游慢 18%（數字越細越慢）
+        if (isBlueCPU && !mp.active) baseSpeed *= 0.90;
         const speed = isSprinting ? baseSpeed * 1.50 : baseSpeed;
         const targetVx = moveX * speed;
         const targetVy = moveY * speed;
@@ -3877,24 +4312,24 @@
           const timeToGoal = (p.x - ball.x) / ball.vx;
           if (timeToGoal > 0 && timeToGoal < 1.25) {
             p.gkReactTimer = (p.gkReactTimer || 0) + dt;
-            const reactionDelay = isBlueCPU ? 0.20 : 0.11; // 反應延遲加大（原本 0.14，越大越遲鈍）
+            const reactionDelay = isBlueCPU ? 0.20 : 0.11;
             if (p.gkReactTimer < reactionDelay) {
               return { mx: 0, my: 0, sprint: false };
             }
 
-            const aimJitter = Math.sin(game.time * 13 + p.y) * (isBlueCPU ? 36 : 16); // 預判誤差加大（原本 20）
+            const aimJitter = Math.sin(game.time * 13 + p.y) * (isBlueCPU ? 36 : 16);
             const predictedY = ball.y + ball.vy * timeToGoal + aimJitter;
             tx = goalLineX + dirOut * 4;
             ty = Math.max(POOL.goalTop + 10, Math.min(POOL.goalBottom - 10, predictedY));
             sprint = true;
 
             const distToBall = Math.hypot(ball.x - p.x, ball.y - p.y);
-            const diveDist = isBlueCPU ? 52 : 82; // 飛撲感應範圍縮細（原本 72）
-            const diveTime = isBlueCPU ? 0.11 : 0.19; // 臨門一腳先撲（原本 0.16）
+            const diveDist = isBlueCPU ? 52 : 82;
+            const diveTime = isBlueCPU ? 0.11 : 0.19;
             if ((distToBall < diveDist || timeToGoal < diveTime) && p.blockCooldown <= 0 && p.state !== 'block') {
               triggerShotBlock(p);
               const diveDiff = ty - p.y;
-              const maxDiveVy = isBlueCPU ? 88 : 136; // 飛撲橫移速度減慢（原本 118）
+              const maxDiveVy = isBlueCPU ? 88 : 136;
               p.vy = Math.max(-maxDiveVy, Math.min(maxDiveVy, diveDiff * 3.8));
             }
             return { mx: tx - p.x, my: ty - p.y, sprint };
@@ -3971,7 +4406,7 @@
               const desiredCornerOffset = aimCornerY - POOL.centerY;
               p.y += Math.sign(desiredCornerOffset) * 3;
             }
-            const skipRate = (p.team === 'blue' && !mp.active) ? 0.32 : 0.68; // 藍隊AI得 22% 用彈水射（原本 0.68）
+            const skipRate = (p.team === 'blue' && !mp.active) ? 0.32 : 0.68;
             const useSkipShot = p.hasFireball || (distToGoal > 165 && Math.random() < skipRate);
             const charge = useSkipShot
               ? 0.90
@@ -4052,7 +4487,7 @@
             const isBehindCarrier = (ballCarrier.facing === 1 && p.x < ballCarrier.x - 10) ||
                                     (ballCarrier.facing === -1 && p.x > ballCarrier.x + 10);
             if (!isBehindCarrier && distToCarrier < 66 && p.state === 'swim' && ballCarrier.stealImmunityTimer <= 0) {
-              if (Math.random() < (p.team === 'blue' && !mp.active ? 0.07 : 0.11)) { // 飛撲頻率減低（原本 0.11）
+              if (Math.random() < (p.team === 'blue' && !mp.active ? 0.07 : 0.11)) {
                 p.state = 'dive';
                 p.stateTimer = 0.28;
                 const ang = Math.atan2(ballCarrier.y - p.y, ballCarrier.x - p.x);
@@ -4145,7 +4580,7 @@
                 triggerOrdinaryFoul(carrier.x, carrier.y, carrier.team, '阻擋犯規！防守退開1米');
               } else if (tacklerSpeed > 100 || tackler.state === 'block' || tackler.state === 'dive') {
                 if (tackler.team === 'blue' && !mp.active && Math.random() < 0.26) {
-                  carrier.stealImmunityTimer = 0.5; // 藍隊AI有 40% 機率搶波失敗
+                  carrier.stealImmunityTimer = 0.5;
                   return;
                 }
                 giveBallTo(tackler, true);
@@ -4320,6 +4755,10 @@
                 continue;
               } else if (ball.isSkipShot && p.state !== 'block' && Math.random() < 0.42) {
                 p.blocks++;
+                if (game.screen === 'shootout') {
+                  giveBallTo(p, false);
+                  return;
+                }
                 ball.y = ball.y < POOL.centerY ? POOL.top + 28 : POOL.bottom - 28;
                 ball.x = p.team === 'red' ? POOL.left + 64 : POOL.right - 64;
                 ball.z = 0;
@@ -4340,7 +4779,7 @@
                 return;
               }
             }
-          } else if (!ball.isShot) {
+          } else if (!ball.isShot && game.screen !== 'shootout') {
             if (game.swimOffActive) {
               game.swimOffActive = false;
               audio.sfxPowerup();
@@ -4389,18 +4828,18 @@
     }
 
     // ============================================================================
-    // 11. HD 2X TROPICAL ISLAND STADIUM & GAME RENDERER (1120x630)
+    // 11. 16-BIT HD PIXEL SCENE RENDERER (TROPICAL SANDY ISLAND, POOL, HUD)
     // ============================================================================
     function renderGame() {
       ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
 
-      drawTropicalEnvironment();
-      drawSpectatorStands();
-      drawReferee();
-      drawPoolAndMarkings();
+      const isBeach = game.effectiveRules === 'beach';
+      renderIslandBeachBackground(isBeach);
+      renderPoolMarkings(isBeach);
+      renderGoals();
 
-      if (game.effectiveRules === 'beach' && game.screen !== 'menu') {
-        drawBeachHazards();
+      if (isBeach && game.screen !== 'menu') {
+        renderBeachHazards();
       }
 
       game.ripples.forEach(r => {
@@ -4410,311 +4849,6 @@
         ctx.ellipse(r.x, r.y, r.r, r.r * 0.45, 0, 0, Math.PI * 2);
         ctx.stroke();
       });
-
-      drawDepthSortedEntities();
-      drawParticlesAndTexts();
-
-      game.screenDrops.forEach(d => {
-        ctx.fillStyle = 'rgba(224, 242, 254, 0.55)';
-        ctx.beginPath();
-        ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.fillRect(d.x - d.r * 0.4, d.y - d.r * 0.4, 4, 4);
-      });
-
-      if (game.screen !== 'menu') {
-        drawBroadcastScoreboard();
-      }
-
-      if (game.screen === 'countdown') {
-        drawCountdownOverlay();
-      } else if (game.screen === 'period_break') {
-        drawPeriodBreakOverlay();
-      } else if (game.screen === 'penalty_shot') {
-        drawPenaltyBanner();
-      } else if (game.screen === 'goal_celeb') {
-        drawGoalCelebrationBanner();
-      }
-    }
-
-    function drawTropicalEnvironment() {
-      drawPixelRect(ctx, 0, 0, LOGICAL_W, LOGICAL_H, '#0ea5e9');
-      drawPixelRect(ctx, 0, 0, LOGICAL_W, 84, '#0284c7');
-
-      const waveShift = (Math.floor(game.time * 14) % 32) * 2;
-      ctx.fillStyle = '#7dd3fc';
-      for (let y = 16; y < LOGICAL_H; y += 52) {
-        for (let x = -64; x < LOGICAL_W + 64; x += 96) {
-          if (x > 92 && x < 1028 && y > 96 && y < 592) continue;
-          ctx.fillRect(x + waveShift, y, 28, 4);
-          ctx.fillRect(x + waveShift + 36, y + 16, 18, 4);
-        }
-      }
-
-      drawPixelRect(ctx, 72, 88, LOGICAL_W - 144, LOGICAL_H - 104, '#fde047');
-      drawPixelRect(ctx, 80, 96, LOGICAL_W - 160, LOGICAL_H - 120, '#fef08a');
-
-      drawPixelRect(ctx, 100, 108, LOGICAL_W - 200, LOGICAL_H - 144, '#cbd5e1');
-      drawPixelRect(ctx, 108, 116, LOGICAL_W - 216, LOGICAL_H - 160, '#e2e8f0');
-
-      drawPalmTree(44, 136, 0);
-      drawPalmTree(40, 510, 1.4);
-      drawPalmTree(1072, 500, 2.5);
-
-      drawLighthouse(1052, 84);
-    }
-
-    function drawPalmTree(x, y, phase) {
-      const S = PX_SCALE;
-      const sway = Math.round(Math.sin(game.time * 2.2 + phase) * 2) * S;
-      drawPixelRect(ctx, x - 2 * S, y, 4 * S, 24 * S, '#92400e');
-      drawPixelRect(ctx, x - 1 * S, y + 4 * S, 3 * S, 20 * S, '#b45309');
-      drawPixelRect(ctx, x - 3 * S + sway, y - 1 * S, 3 * S, 3 * S, '#451a03');
-      drawPixelRect(ctx, x + 1 * S + sway, y - 1 * S, 3 * S, 3 * S, '#451a03');
-      const tx = x + sway;
-      drawPixelRect(ctx, tx - 14 * S, y - 5 * S, 12 * S, 3 * S, '#16a34a');
-      drawPixelRect(ctx, tx + 2 * S, y - 5 * S, 12 * S, 3 * S, '#16a34a');
-      drawPixelRect(ctx, tx - 10 * S, y - 9 * S, 9 * S, 3 * S, '#22c55e');
-      drawPixelRect(ctx, tx + 1 * S, y - 9 * S, 9 * S, 3 * S, '#22c55e');
-      drawPixelRect(ctx, tx - 4 * S, y - 12 * S, 8 * S, 3 * S, '#4ade80');
-    }
-
-    function drawLighthouse(x, y) {
-      const S = PX_SCALE;
-      drawPixelRect(ctx, x - 12 * S, y + 22 * S, 24 * S, 8 * S, '#64748b');
-      drawPixelRect(ctx, x - 6 * S, y + 16 * S, 12 * S, 6 * S, '#ef4444');
-      drawPixelRect(ctx, x - 5 * S, y + 10 * S, 10 * S, 6 * S, '#ffffff');
-      drawPixelRect(ctx, x - 4 * S, y + 4 * S, 8 * S, 6 * S, '#ef4444');
-      drawPixelRect(ctx, x - 4 * S, y, 8 * S, 4 * S, '#fef08a');
-      drawPixelRect(ctx, x - 5 * S, y - 2 * S, 10 * S, 2 * S, '#1e293b');
-      const beamAlpha = 0.25 + Math.abs(Math.sin(game.time * 2.5)) * 0.35;
-      ctx.fillStyle = `rgba(254, 240, 138, ${beamAlpha})`;
-      ctx.beginPath();
-      ctx.moveTo(x, y + 4);
-      ctx.lineTo(x - 90, y - 24);
-      ctx.lineTo(x - 90, y + 28);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    function drawSpectatorStands() {
-      const S = PX_SCALE;
-      drawPixelRect(ctx, 136, 52, LOGICAL_W - 272, 52, '#334155');
-      drawPixelRect(ctx, 136, 52, LOGICAL_W - 272, 6, '#ffd541');
-
-      const isGoal = game.screen === 'goal_celeb';
-      game.spectators.forEach(s => {
-        const wave = Math.sin(game.time * 5.5 - s.phase);
-        const jump = isGoal ? Math.abs(Math.sin(game.time * 12 + s.phase)) * 8 : (wave > 0.72 ? 6 : 0);
-        const sy = Math.round(s.y - jump);
-
-        drawPixelRect(ctx, s.x - 3 * S, sy, 6 * S, 5 * S, s.color);
-        drawPixelRect(ctx, s.x - 2 * S, sy - 4 * S, 4 * S, 4 * S, s.skin);
-
-        if (s.hasFlag) {
-          const fw = Math.round(Math.sin(game.time * 8 + s.phase) * 4);
-          drawPixelRect(ctx, s.x + 3 * S, sy - 8 * S, 2, 16, '#ffffff');
-          drawPixelRect(ctx, s.x + 4 * S, sy - 8 * S + fw, 10, 6, s.flagColor);
-        }
-      });
-    }
-
-    function drawReferee() {
-      const S = PX_SCALE;
-      const ref = game.referee;
-      const rx = Math.round(ref.x);
-      const ry = Math.round(ref.y);
-      const step = Math.round(Math.sin(game.time * 12) * 3);
-
-      drawPixelRect(ctx, rx - 3 * S, ry - 4 * S + step, 6 * S, 6 * S, '#ffffff');
-      drawPixelRect(ctx, rx - 3 * S, ry + 2 * S + step, 6 * S, 3 * S, '#0f172a');
-      drawPixelRect(ctx, rx - 2 * S, ry - 8 * S + step, 4 * S, 4 * S, '#f1b980');
-      drawPixelRect(ctx, rx - 3 * S, ry - 9 * S + step, 6 * S, 2 * S, '#0284c7');
-
-      if (ref.gesture !== 'run') {
-        drawPixelRect(ctx, rx + 3 * S, ry - 10 * S, 4, 14, '#ffffff');
-        if (ref.gesture === 'red_flag') {
-          drawPixelRect(ctx, rx + 5 * S, ry - 11 * S, 12, 8, '#ef233c');
-        } else if (ref.gesture === 'penalty') {
-          drawPixelRect(ctx, rx + 5 * S, ry - 11 * S, 12, 8, '#ffd541');
-        } else if (ref.gesture === 'goal') {
-          drawPixelRect(ctx, rx - 5 * S, ry - 10 * S, 4, 14, '#ffffff');
-        }
-      }
-    }
-
-    function drawPoolAndMarkings() {
-      const waterBase = game.effectiveRules === 'beach' ? '#06b6d4' : '#0284c7';
-      const waterInner = game.effectiveRules === 'beach' ? '#22d3ee' : '#0ea5e9';
-      drawPixelRect(ctx, POOL.left, POOL.top, POOL.width, POOL.height, waterBase);
-      drawPixelRect(ctx, POOL.left + 6, POOL.top + 6, POOL.width - 12, POOL.height - 12, waterInner);
-
-      const shift = (Math.floor(game.time * 16) % 24) * 2;
-      ctx.fillStyle = 'rgba(186, 230, 253, 0.35)';
-      for (let y = POOL.top + 20; y < POOL.bottom - 16; y += 36) {
-        for (let x = POOL.left + 24; x < POOL.right - 40; x += 72) {
-          const wx = x + ((y % 72 === 0) ? shift : -shift);
-          ctx.fillRect(wx, y, 20, 2);
-          ctx.fillRect(wx + 8, y + 2, 12, 2);
-        }
-      }
-
-      ctx.fillStyle = 'rgba(239, 35, 60, 0.22)';
-      ctx.fillRect(POOL.left + 6, POOL.top + 6, 46, 36);
-      ctx.fillRect(POOL.right - 52, POOL.top + 6, 46, 36);
-      ctx.strokeStyle = 'rgba(239, 35, 60, 0.65)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(POOL.left + 6, POOL.top + 6, 46, 36);
-      ctx.strokeRect(POOL.right - 52, POOL.top + 6, 46, 36);
-
-      drawPixelRect(ctx, POOL.centerX - 2, POOL.top + 4, 4, POOL.height - 8, 'rgba(255,255,255,0.65)');
-
-      const fiveMLeft = POOL.left + POOL.fiveMeterDist;
-      const fiveMRight = POOL.right - POOL.fiveMeterDist;
-      for (let y = POOL.top + 8; y < POOL.bottom - 8; y += 16) {
-        drawPixelRect(ctx, fiveMLeft, y, 4, 8, 'rgba(253, 224, 71, 0.78)');
-        drawPixelRect(ctx, fiveMRight, y, 4, 8, 'rgba(253, 224, 71, 0.78)');
-      }
-
-      const twoMLeft = POOL.left + POOL.twoMeterDist;
-      const twoMRight = POOL.right - POOL.twoMeterDist;
-      for (let y = POOL.top + 8; y < POOL.bottom - 8; y += 12) {
-        drawPixelRect(ctx, twoMLeft, y, 4, 6, 'rgba(244, 63, 94, 0.78)');
-        drawPixelRect(ctx, twoMRight, y, 4, 6, 'rgba(244, 63, 94, 0.78)');
-      }
-
-      for (let x = POOL.left + 12; x < POOL.right - 12; x += 20) {
-        let buoyColor = '#ffffff';
-        if (x < twoMLeft || x > twoMRight) buoyColor = '#ef4444';
-        else if (x < fiveMLeft || x > fiveMRight) buoyColor = '#facc15';
-        drawPixelRect(ctx, x, POOL.top - 2, 12, 6, buoyColor);
-        drawPixelRect(ctx, x, POOL.bottom - 4, 12, 6, buoyColor);
-      }
-    }
-
-    function drawBeachHazards() {
-      if (game.beachWave.active) {
-        const wx = Math.round(game.beachWave.x);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
-        for (let y = POOL.top + 8; y < POOL.bottom - 8; y += 12) {
-          const off = Math.sin(y * 0.1 + game.time * 10) * 6;
-          ctx.fillRect(wx + off - 6, y, 12, 8);
-        }
-      }
-
-      game.powerups.forEach(pu => {
-        const bob = Math.sin(game.time * 6) * 4;
-        const px = Math.round(pu.x);
-        const py = Math.round(pu.y + bob);
-        if (pu.type === 'fireball') {
-          drawPixelRect(ctx, px - 12, py - 12, 24, 24, '#ea580c');
-          drawPixelRect(ctx, px - 8, py - 8, 16, 16, '#facc15');
-          drawPixelRect(ctx, px - 4, py - 14, 8, 6, '#ef4444');
-        } else {
-          ctx.strokeStyle = '#38e54d';
-          ctx.lineWidth = 4;
-          ctx.beginPath();
-          ctx.arc(px, py, 12 + Math.sin(game.time * 8) * 3, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-      });
-
-      if (game.beachBall.active) {
-        const bb = game.beachBall;
-        const bx = Math.round(bb.x);
-        const by = Math.round(bb.y);
-        ctx.fillStyle = 'rgba(0,0,0,0.25)';
-        ctx.beginPath();
-        ctx.ellipse(bx, by + bb.r, bb.r, 8, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(bx, by, bb.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#ef4444';
-        ctx.fillRect(bx - bb.r + 6, by - 8, (bb.r - 6) * 2, 16);
-        ctx.fillStyle = '#facc15';
-        ctx.fillRect(bx - 8, by - bb.r + 6, 16, (bb.r - 6) * 2);
-      }
-    }
-
-    function drawGoalFrame(side) {
-      const isLeft = side === 'left';
-      const gx = isLeft ? POOL.left - POOL.goalDepth : POOL.right;
-      const gy = POOL.goalTop;
-      const gh = POOL.goalBottom - POOL.goalTop;
-      const gw = POOL.goalDepth;
-
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
-      ctx.fillRect(gx, gy, gw, gh);
-
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-      ctx.lineWidth = 2;
-      for (let nx = gx; nx <= gx + gw; nx += 8) {
-        ctx.beginPath();
-        ctx.moveTo(nx, gy);
-        ctx.lineTo(nx, gy + gh);
-        ctx.stroke();
-      }
-      for (let ny = gy; ny <= gy + gh; ny += 10) {
-        ctx.beginPath();
-        ctx.moveTo(gx, ny);
-        ctx.lineTo(gx + gw, ny);
-        ctx.stroke();
-      }
-
-      const postX = isLeft ? POOL.left : POOL.right;
-      drawPixelRect(ctx, postX - 4, gy - 4, 8, gh + 8, '#ffffff');
-      drawPixelRect(ctx, gx, gy - 4, gw, 6, '#ef4444');
-      drawPixelRect(ctx, gx, gy + gh - 2, gw, 6, '#ef4444');
-    }
-
-    function drawWaterPoloBall() {
-      const ball = game.ball;
-      const bx = Math.round(ball.x);
-      const by = Math.round(ball.y - ball.z);
-
-      ctx.fillStyle = 'rgba(5, 20, 40, 0.38)';
-      ctx.beginPath();
-      ctx.ellipse(bx, Math.round(ball.y + 6), 9, 4.4, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      if (ball.isShot && ball.trail.length > 1) {
-        ball.trail.forEach((tr, idx) => {
-          const alpha = (idx / ball.trail.length) * 0.55;
-          ctx.fillStyle = ball.isFireShot
-            ? `rgba(255, 107, 53, ${alpha})`
-            : (ball.isSkipShot ? `rgba(255, 213, 65, ${alpha})` : `rgba(255, 255, 255, ${alpha})`);
-          ctx.beginPath();
-          ctx.arc(Math.round(tr.x), Math.round(tr.y - tr.z), 7, 0, Math.PI * 2);
-          ctx.fill();
-        });
-      }
-
-      drawPixelRect(ctx, bx - 8, by - 8, 16, 16, ball.isFireShot ? '#ff4500' : '#facc15');
-      drawPixelRect(ctx, bx - 6, by - 6, 12, 12, ball.isFireShot ? '#fde047' : '#fef08a');
-      drawPixelRect(ctx, bx - 6, by - 2, 12, 4, ball.isFireShot ? '#dc2626' : '#0284c7');
-      drawPixelRect(ctx, bx - 4, by - 6, 4, 4, '#ffffff');
-    }
-
-    function drawChargeRing() {
-      const p = game.controlledPlayer;
-      if (!p || game.ball.owner !== p || !keys.shoot) return;
-
-      const ratio = Math.min(1, inputTimers.shootHeldTime / 0.72);
-      const px = Math.round(p.x);
-      const py = Math.round(p.y - 48);
-
-      drawPixelRect(ctx, px - 28, py, 56, 10, '#091526');
-      const fillW = Math.round(52 * ratio);
-      const col = ratio >= 0.8 ? '#ffd541' : (ratio >= 0.4 ? '#38bdf8' : '#4ade80');
-      drawPixelRect(ctx, px - 26, py + 2, fillW, 6, col);
-    }
-
-    function drawDepthSortedEntities() {
-      drawGoalFrame('left');
-      drawGoalFrame('right');
 
       const sorted = [...game.players].sort((a, b) => a.y - b.y);
       sorted.forEach(p => {
@@ -4751,11 +4885,8 @@
         }
       });
 
-      drawWaterPoloBall();
-      drawChargeRing();
-    }
+      renderWaterPoloBall(game.ball);
 
-    function drawParticlesAndTexts() {
       game.splashes.forEach(s => {
         drawPixelRect(ctx, s.x, s.y - Math.max(0, s.z), 4, 4, s.color);
       });
@@ -4767,269 +4898,600 @@
       game.floatingTexts.forEach(ft => {
         drawOutlinedText(ctx, ft.text, ft.x, ft.y, 20, ft.color, '#061324', 3.5);
       });
-    }
 
-    function drawBroadcastScoreboard() {
-      const bx = 210;
-      const by = 8;
-      const bw = 700;
-      const bh = 44;
+      game.screenDrops.forEach(d => {
+        ctx.fillStyle = 'rgba(224, 242, 254, 0.55)';
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.fillRect(d.x - d.r * 0.4, d.y - d.r * 0.4, 4, 4);
+      });
 
-      drawPixelRect(ctx, bx, by, bw, bh, 'rgba(7, 20, 38, 0.94)');
-      ctx.strokeStyle = '#ffd541';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(bx, by, bw, bh);
-
-      drawPixelRect(ctx, bx + 8, by + 6, 118, 32, '#dc2626');
-      drawOutlinedText(ctx, '紅隊 主場', bx + 67, by + 28, 18, '#ffffff', '#7f1d1d', 2);
-      drawOutlinedText(ctx, String(game.scoreRed), bx + 154, by + 31, 26, '#ffd541', '#061324', 3);
-
-      const mins = Math.floor(Math.max(0, game.periodTime) / 60);
-      const secs = Math.floor(Math.max(0, game.periodTime) % 60);
-      const timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-      drawOutlinedText(ctx, `第${game.period}/${game.maxPeriods}節`, bx + 275, by + 20, 16, '#7ee8fa', '#061324', 2.5);
-      drawOutlinedText(ctx, timeStr, bx + 275, by + 39, 18, '#ffffff', '#061324', 2.5);
-
-      const scVal = Math.ceil(Math.max(0, game.shotClock));
-      const scUrgent = scVal <= 5;
-      drawPixelRect(ctx, bx + 348, by + 6, 74, 32, scUrgent ? '#dc2626' : '#0f172a');
-      drawOutlinedText(ctx, `${scVal}s`, bx + 385, by + 30, 22, scUrgent ? '#ffffff' : '#38e54d', '#061324', 2.5);
-
-      drawOutlinedText(ctx, String(game.scoreBlue), bx + 462, by + 31, 26, '#ffd541', '#061324', 3);
-      drawPixelRect(ctx, bx + 492, by + 6, 118, 32, '#2563eb');
-      drawOutlinedText(ctx, '藍隊 客隊', bx + 551, by + 28, 18, '#ffffff', '#1e3a8a', 2);
-
-      const subTag = game.effectiveRules === 'beach' ? '4v4' : (game.effectiveRules === 'classic7' ? '7v7' : '5v5');
-      const modeLabel = game.mode === 'online1v1'
-        ? `1v1(${subTag})`
-        : (game.mode === 'beach' ? '沙灘' : (game.mode === 'classic7' ? '7v7' : '5v5'));
-      drawOutlinedText(ctx, modeLabel, bx + 654, by + 28, 16, '#ffd541', '#061324', 2.5);
-    }
-
-    function drawCountdownOverlay() {
-      const ceilVal = Math.ceil(game.countdownTimer);
-      const label = ceilVal >= 1 ? String(ceilVal) : '嘟——開波！';
-      const subText = game.isSwimOff
-        ? '⚡ 中線衝波（SWIM-OFF）！按住加速衝向中線搶首波！'
-        : '準備開波！留意頭頂黃色標記角色';
-
-      drawPixelRect(ctx, LOGICAL_W / 2 - 270, 220, 540, 130, 'rgba(6, 19, 36, 0.85)');
-      ctx.strokeStyle = '#ffd541';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(LOGICAL_W / 2 - 270, 220, 540, 130);
-
-      drawOutlinedText(ctx, label, LOGICAL_W / 2, 290, 46, '#ffd541', '#d92638', 4);
-      drawOutlinedText(ctx, subText, LOGICAL_W / 2, 332, 18, '#7ee8fa', '#061324', 3);
-
-      const cp = game.controlledPlayer;
-      if (cp) {
-        const bounce = Math.sin(game.time * 10) * 6;
-        drawOutlinedText(ctx, '▼ 你控制此球員', cp.x, cp.y - 68 + bounce, 18, '#ffd541', '#061324', 3);
+      if (game.screen !== 'menu') {
+        renderHUD();
       }
     }
 
-    function drawPeriodBreakOverlay() {
-      const ceilVal = Math.max(1, Math.ceil(game.breakTimer));
-      drawPixelRect(ctx, LOGICAL_W / 2 - 310, 200, 620, 185, 'rgba(6, 19, 36, 0.90)');
-      ctx.strokeStyle = '#ffd541';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(LOGICAL_W / 2 - 310, 200, 620, 185);
+    function drawPixelPalmTree(x, y, dir = 1, scale = 1) {
+      const sway = Math.round(Math.sin(game.time * 2.2 + x * 0.03) * 2);
+      const px = Math.round(x);
+      const py = Math.round(y);
 
-      drawOutlinedText(ctx, '⏸️ 第 1 節結束 · 節間休息', LOGICAL_W / 2, 248, 28, '#ffd541', '#061324', 3.5);
-      drawOutlinedText(ctx, `目前比數：紅隊 ${game.scoreRed}  -  ${game.scoreBlue} 藍隊`, LOGICAL_W / 2, 292, 22, '#ffffff', '#061324', 3);
-      drawOutlinedText(ctx, `全隊體力快速回復中...  ${ceilVal} 秒後第 2 節開波`, LOGICAL_W / 2, 336, 19, '#38e54d', '#061324', 3);
-      drawOutlinedText(ctx, '第 2 節將以「中線衝波 Swim-Off」重新爭奪首波！', LOGICAL_W / 2, 368, 16, '#7ee8fa', '#061324', 2.5);
+      // Shadow on sand
+      drawPixelRect(ctx, px - 14 * scale, py + 4 * scale, 28 * scale, 6 * scale, 'rgba(146, 64, 14, 0.28)');
+
+      // Curved segmented trunk
+      for (let i = 0; i < 6; i++) {
+        const segX = px + dir * i * 2 * scale + Math.round((i / 5) * sway);
+        const segY = py - (i + 1) * 8 * scale;
+        const col = i % 2 === 0 ? '#92400e' : '#b45309';
+        drawPixelRect(ctx, segX - 4 * scale, segY, 8 * scale, 8 * scale, col);
+      }
+
+      const topX = px + dir * 10 * scale + sway;
+      const topY = py - 50 * scale;
+
+      // Coconuts
+      drawPixelRect(ctx, topX - 4 * scale, topY + 2 * scale, 4 * scale, 4 * scale, '#451a03');
+      drawPixelRect(ctx, topX + 1 * scale, topY + 3 * scale, 4 * scale, 4 * scale, '#78350f');
+
+      // Lush 16-bit palm fronds
+      drawPixelRect(ctx, topX - 28 * scale, topY - 4 * scale, 56 * scale, 6 * scale, '#15803d');
+      drawPixelRect(ctx, topX - 22 * scale, topY - 9 * scale, 44 * scale, 6 * scale, '#16a34a');
+      drawPixelRect(ctx, topX - 14 * scale, topY - 13 * scale, 28 * scale, 5 * scale, '#22c55e');
+      drawPixelRect(ctx, topX - 32 * scale, topY + 1 * scale, 12 * scale, 5 * scale, '#166534');
+      drawPixelRect(ctx, topX + 20 * scale, topY + 1 * scale, 12 * scale, 5 * scale, '#166534');
     }
 
-    function drawPenaltyBanner() {
-      const ps = game.penaltyState;
-      const myTeam = (mp.active && mp.role === 'guest') ? 'blue' : 'red';
-      const msg = ps.attackingTeam === myTeam
-        ? '🚨 五米極刑點球！按【上/下】瞄準角位，按【K / X】射門！'
-        : '🚨 對手五米點球！按【上/下】移動龍門，按【K / X】飛身撲救！';
+    function drawBeachUmbrella(x, y, colA, colB) {
+      const px = Math.round(x);
+      const py = Math.round(y);
+      drawPixelRect(ctx, px - 16, py + 12, 32, 6, 'rgba(146, 64, 14, 0.25)');
+      drawPixelRect(ctx, px - 2, py - 14, 4, 28, '#78350f');
+      drawPixelRect(ctx, px - 22, py - 20, 44, 8, colA);
+      drawPixelRect(ctx, px - 14, py - 26, 28, 7, colB);
+      drawPixelRect(ctx, px - 6, py - 30, 12, 5, colA);
+      drawPixelRect(ctx, px - 14, py - 20, 8, 8, colB);
+      drawPixelRect(ctx, px + 6, py - 20, 8, 8, colB);
+      drawPixelRect(ctx, px - 6, py - 26, 12, 7, colA);
+    }
 
-      drawPixelRect(ctx, LOGICAL_W / 2 - 340, 62, 680, 44, 'rgba(153, 27, 27, 0.92)');
+    function renderIslandBeachBackground(isBeach) {
+      // 1. Tropical Sky & Horizon (y = 0..76)
+      drawPixelRect(ctx, 0, 0, LOGICAL_W, 42, '#29b6f6');
+      drawPixelRect(ctx, 0, 42, LOGICAL_W, 34, '#81d4fa');
+
+      // Pixel Sun with warm aura
+      drawPixelRect(ctx, 976, 14, 44, 44, '#fde047');
+      drawPixelRect(ctx, 982, 20, 32, 32, '#fef08a');
+
+      // Drifting 16-bit Pixel Clouds
+      [160, 490, 790].forEach((cx, i) => {
+        const shift = ((game.time * (10 + i * 3) + cx) % (LOGICAL_W + 140)) - 70;
+        drawPixelRect(ctx, shift, 18 + (i % 2) * 10, 68, 12, '#ffffff');
+        drawPixelRect(ctx, shift + 12, 10 + (i % 2) * 10, 42, 10, '#ffffff');
+      });
+
+      // Distant horizon islet & tiny sailboat
+      drawPixelRect(ctx, 240, 68, 54, 8, '#15803d');
+      drawPixelRect(ctx, 252, 63, 30, 6, '#22c55e');
+      const boatX = 680 + Math.round(Math.sin(game.time * 0.6) * 18);
+      drawPixelRect(ctx, boatX, 70, 18, 4, '#78350f');
+      drawPixelRect(ctx, boatX + 7, 58, 2, 12, '#ffffff');
+      drawPixelRect(ctx, boatX + 9, 59, 8, 9, '#ef4444');
+
+      // 2. Surrounding Deep & Shallow Tropical Ocean (Full Canvas Base)
+      drawPixelRect(ctx, 0, 76, LOGICAL_W, LOGICAL_H - 76, '#0277bd');
+      drawPixelRect(ctx, 16, 84, LOGICAL_W - 32, LOGICAL_H - 92, '#0288d1');
+
+      // Animated outer ocean sparkles
+      const oceanShift = Math.floor(game.time * 18) % 40;
+      for (let oy = 86; oy < LOGICAL_H - 10; oy += 36) {
+        drawPixelRect(ctx, 8 + ((oy + oceanShift) % 22), oy, 14, 3, 'rgba(186, 230, 253, 0.4)');
+        drawPixelRect(ctx, LOGICAL_W - 28 + ((oy + oceanShift) % 16), oy + 12, 14, 3, 'rgba(186, 230, 253, 0.4)');
+      }
+
+      // 3. Shallow Turquoise Lagoon Ring & Animated White Surf Foam Around Island
+      const surfPulse = Math.round(Math.sin(game.time * 2.6) * 3);
+      const islandLeft = 32;
+      const islandTop = 92;
+      const islandW = LOGICAL_W - 64;
+      const islandH = LOGICAL_H - 108;
+
+      drawPixelRect(ctx, islandLeft - 14 - surfPulse, islandTop - 10 - surfPulse, islandW + 28 + surfPulse * 2, islandH + 20 + surfPulse * 2, '#26c6da');
+      drawPixelRect(ctx, islandLeft - 6 - surfPulse, islandTop - 5 - surfPulse, islandW + 12 + surfPulse * 2, islandH + 10 + surfPulse * 2, '#e0f7fa');
+
+      // 4. Golden Sandy Beach Island Landmass
+      drawPixelRect(ctx, islandLeft, islandTop, islandW, islandH, '#eab308');
+      drawPixelRect(ctx, islandLeft + 6, islandTop + 6, islandW - 12, islandH - 12, '#facc15');
+      drawPixelRect(ctx, islandLeft + 14, islandTop + 12, islandW - 28, islandH - 24, '#fde047');
+
+      // Pixel sand texture speckles & seashells
+      for (let sx = islandLeft + 24; sx < islandLeft + islandW - 24; sx += 44) {
+        drawPixelRect(ctx, sx, islandTop + 16, 4, 2, '#eab308');
+        drawPixelRect(ctx, sx + 18, POOL.bottom + 24, 4, 2, '#eab308');
+      }
+      for (let sy = 150; sy < 560; sy += 34) {
+        drawPixelRect(ctx, 52 + (sy % 18), sy, 4, 2, '#eab308');
+        drawPixelRect(ctx, LOGICAL_W - 64 - (sy % 18), sy + 10, 4, 2, '#eab308');
+      }
+
+      // 5. Island Props: Wooden Tiki Dock, Umbrellas, Sandcastle, Starfish & Crab
+      drawPixelRect(ctx, 0, 344, 44, 34, '#78350f');
+      for (let px = 4; px < 40; px += 8) {
+        drawPixelRect(ctx, px, 346, 6, 30, '#b45309');
+      }
+
+      // Left Beach Umbrella & Lounge Chair
+      drawBeachUmbrella(78, 268, '#ef4444', '#ffffff');
+      drawPixelRect(ctx, 56, 286, 24, 8, '#38bdf8');
+      drawPixelRect(ctx, 56, 282, 8, 6, '#0284c7');
+
+      // Right Beach Umbrella & Surfboard
+      drawBeachUmbrella(LOGICAL_W - 78, 276, '#0284c7', '#fde047');
+      drawPixelRect(ctx, LOGICAL_W - 56, 272, 8, 26, '#ff4b5c');
+      drawPixelRect(ctx, LOGICAL_W - 54, 274, 4, 22, '#ffffff');
+
+      // Pixel Sandcastle on Bottom-Right Beach
+      const scX = LOGICAL_W - 84;
+      const scY = 532;
+      drawPixelRect(ctx, scX, scY, 32, 16, '#eab308');
+      drawPixelRect(ctx, scX + 2, scY - 8, 8, 8, '#ca8a04');
+      drawPixelRect(ctx, scX + 22, scY - 8, 8, 8, '#ca8a04');
+      drawPixelRect(ctx, scX + 12, scY - 12, 8, 12, '#eab308');
+      drawPixelRect(ctx, scX + 15, scY - 20, 2, 8, '#ffffff');
+      drawPixelRect(ctx, scX + 17, scY - 20, 7, 5, '#ef4444');
+
+      // Starfish & Scuttling Little Red Crab on Bottom Sand
+      drawPixelRect(ctx, 84, 548, 8, 8, '#f97316');
+      const crabX = 320 + Math.round(Math.sin(game.time * 1.8) * 45);
+      drawPixelRect(ctx, crabX, 594, 10, 6, '#ef233c');
+      drawPixelRect(ctx, crabX - 3, 591, 3, 4, '#ef233c');
+      drawPixelRect(ctx, crabX + 10, 591, 3, 4, '#ef233c');
+
+      // Top Wooden Tiki Boardwalk for the Referee
+      drawPixelRect(ctx, POOL.left - 8, POOL.top - 32, POOL.width + 16, 22, '#78350f');
+      for (let bx = POOL.left - 4; bx < POOL.right + 4; bx += 16) {
+        drawPixelRect(ctx, bx, POOL.top - 30, 14, 18, '#b45309');
+      }
+
+      // 6. Swaying Palm Trees around the Island Corners
+      drawPixelPalmTree(68, 142, 1, 1);
+      drawPixelPalmTree(64, 468, 1, 0.95);
+      drawPixelPalmTree(LOGICAL_W - 68, 146, -1, 1);
+      drawPixelPalmTree(LOGICAL_W - 64, 464, -1, 0.95);
+
+      // 7. Island Lagoon Water Polo Court Frame
+      if (isBeach) {
+        drawPixelRect(ctx, POOL.left - 10, POOL.top - 10, POOL.width + 20, POOL.height + 20, '#f97316');
+        drawPixelRect(ctx, POOL.left - 6, POOL.top - 6, POOL.width + 12, POOL.height + 12, '#facc15');
+      } else {
+        drawPixelRect(ctx, POOL.left - 8, POOL.top - 8, POOL.width + 16, POOL.height + 16, '#0c4a6e');
+        for (let fx = POOL.left - 6; fx < POOL.right + 6; fx += 24) {
+          const buoyCol = ((fx / 24) % 2 === 0) ? '#ffffff' : '#ef233c';
+          drawPixelRect(ctx, fx, POOL.top - 7, 12, 6, buoyCol);
+          drawPixelRect(ctx, fx, POOL.bottom + 1, 12, 6, buoyCol);
+        }
+      }
+
+      // Crystal Clear Tropical Lagoon Water
+      drawPixelRect(ctx, POOL.left, POOL.top, POOL.width, POOL.height, '#1ca3ec');
+
+      const waveShift = Math.floor(game.time * 24) % 48;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+      for (let y = POOL.top + 16; y < POOL.bottom - 12; y += 28) {
+        for (let x = POOL.left + 12 + ((y / 28) % 2) * 24; x < POOL.right - 24; x += 48) {
+          const wx = x + (waveShift > 24 ? 4 : 0);
+          ctx.fillRect(wx, y, 18, 3);
+        }
+      }
+
+      drawRefereeSprite(game.referee);
+    }
+
+    function drawRefereeSprite(ref) {
+      const rx = Math.round(ref.x);
+      const ry = Math.round(ref.y);
+      const walk = Math.sin(game.time * 12) * 2;
+
+      drawPixelRect(ctx, rx - 5, ry - 6 + walk, 10, 12, '#ffffff');
+      drawPixelRect(ctx, rx - 5, ry - 4 + walk, 2, 10, '#111827');
+      drawPixelRect(ctx, rx + 3, ry - 4 + walk, 2, 10, '#111827');
+      drawPixelRect(ctx, rx - 4, ry - 14 + walk, 8, 8, '#fed7aa');
+      drawPixelRect(ctx, rx - 5, ry - 16 + walk, 10, 3, '#1e293b');
+
+      if (ref.gesture === 'red_flag') {
+        drawPixelRect(ctx, rx + 6, ry - 18, 2, 16, '#cbd5e1');
+        drawPixelRect(ctx, rx + 8, ry - 18, 12, 8, '#ef233c');
+      } else if (ref.gesture === 'penalty') {
+        drawPixelRect(ctx, rx + 6, ry - 20, 2, 18, '#cbd5e1');
+        drawPixelRect(ctx, rx + 8, ry - 20, 12, 8, '#ffd541');
+      } else if (ref.gesture === 'whistle' || ref.gesture === 'goal') {
+        drawPixelRect(ctx, rx - 9, ry - 16, 3, 10, '#ffffff');
+        drawPixelRect(ctx, rx + 6, ry - 16, 3, 10, '#ffffff');
+      }
+    }
+
+    function renderPoolMarkings(isBeach) {
+      // White Center Line
+      drawPixelRect(ctx, POOL.centerX - 2, POOL.top, 4, POOL.height, 'rgba(255, 255, 255, 0.85)');
+
+      // Red 2-Meter Dashed Lines (Yellow 5m lines removed per user request)
+      const red2m = POOL.left + POOL.twoMeterDist;
+      const blue2m = POOL.right - POOL.twoMeterDist;
+
+      for (let y = POOL.top + 6; y < POOL.bottom - 6; y += 14) {
+        drawPixelRect(ctx, red2m - 2, y, 4, 8, '#ef233c');
+        drawPixelRect(ctx, blue2m - 2, y, 4, 8, '#ef233c');
+      }
+
+      // Top Boundary Cone Markers (White Goal Line, Red 2m, White Center)
+      drawPixelRect(ctx, POOL.left - 8, POOL.top - 10, 4, 10, '#ffffff');
+      drawPixelRect(ctx, red2m - 2, POOL.top - 10, 4, 10, '#ef233c');
+      drawPixelRect(ctx, POOL.centerX - 2, POOL.top - 10, 4, 10, '#ffffff');
+      drawPixelRect(ctx, blue2m - 2, POOL.top - 10, 4, 10, '#ef233c');
+      drawPixelRect(ctx, POOL.right + 4, POOL.top - 10, 4, 10, '#ffffff');
+
+      if (!isBeach) {
+        [
+          { x: POOL.left + 12, label: '紅隊罰時區' },
+          { x: POOL.right - 92, label: '藍隊罰時區' }
+        ].forEach(box => {
+          ctx.strokeStyle = 'rgba(255, 75, 92, 0.75)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(box.x, POOL.top + 6, 80, 34);
+          drawOutlinedText(ctx, box.label, box.x + 40, POOL.top + 26, 11, '#fca5a5', '#061324', 2);
+        });
+      }
+
+      if (game.screen === 'countdown' || game.swimOffActive) {
+        ctx.strokeStyle = 'rgba(255, 213, 65, 0.85)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(POOL.centerX, POOL.centerY, 26, 12, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    function renderGoals() {
+      const gt = POOL.goalTop;
+      const gb = POOL.goalBottom;
+      const gh = gb - gt;
+      const gd = POOL.goalDepth;
+
+      drawPixelRect(ctx, POOL.left - gd, gt, gd, gh, 'rgba(15, 23, 42, 0.45)');
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+      ctx.lineWidth = 1.5;
+      for (let gx = POOL.left - gd; gx <= POOL.left; gx += 6) {
+        ctx.beginPath(); ctx.moveTo(gx, gt); ctx.lineTo(gx, gb); ctx.stroke();
+      }
+      for (let gy = gt; gy <= gb; gy += 6) {
+        ctx.beginPath(); ctx.moveTo(POOL.left - gd, gy); ctx.lineTo(POOL.left, gy); ctx.stroke();
+      }
+      drawPixelRect(ctx, POOL.left - gd, gt - 4, gd + 6, 6, '#ffffff');
+      drawPixelRect(ctx, POOL.left - gd, gb - 2, gd + 6, 6, '#ffffff');
+      drawPixelRect(ctx, POOL.left - gd - 4, gt - 4, 6, gh + 8, '#ffffff');
+      drawPixelRect(ctx, POOL.left - 3, gt - 5, 6, 8, '#ef233c');
+      drawPixelRect(ctx, POOL.left - 3, gb - 3, 6, 8, '#ef233c');
+
+      drawPixelRect(ctx, POOL.right, gt, gd, gh, 'rgba(15, 23, 42, 0.45)');
+      for (let gx = POOL.right; gx <= POOL.right + gd; gx += 6) {
+        ctx.beginPath(); ctx.moveTo(gx, gt); ctx.lineTo(gx, gb); ctx.stroke();
+      }
+      for (let gy = gt; gy <= gb; gy += 6) {
+        ctx.beginPath(); ctx.moveTo(POOL.right, gy); ctx.lineTo(POOL.right + gd, gy); ctx.stroke();
+      }
+      drawPixelRect(ctx, POOL.right - 2, gt - 4, gd + 6, 6, '#ffffff');
+      drawPixelRect(ctx, POOL.right - 2, gb - 2, gd + 6, 6, '#ffffff');
+      drawPixelRect(ctx, POOL.right + gd - 2, gt - 4, 6, gh + 8, '#ffffff');
+      drawPixelRect(ctx, POOL.right - 3, gt - 5, 6, 8, '#3b82f6');
+      drawPixelRect(ctx, POOL.right - 3, gb - 3, 6, 8, '#3b82f6');
+    }
+
+    function renderBeachHazards() {
+      if (game.beachWave.active) {
+        const wx = Math.round(game.beachWave.x);
+        drawPixelRect(ctx, wx - 12, POOL.top, 24, POOL.height, 'rgba(125, 211, 252, 0.42)');
+        for (let y = POOL.top + 8; y < POOL.bottom - 8; y += 16) {
+          drawPixelRect(ctx, wx - 4, y, 8, 8, '#ffffff');
+        }
+      }
+
+      game.powerups.forEach(pu => {
+        const bob = Math.sin(game.time * 6) * 4;
+        const px = Math.round(pu.x);
+        const py = Math.round(pu.y + bob);
+        drawPixelRect(ctx, px - 14, py - 14, 28, 28, '#09192f');
+        drawPixelRect(ctx, px - 12, py - 12, 24, 24, pu.type === 'fireball' ? '#ea580c' : '#16a34a');
+        drawOutlinedText(ctx, pu.type === 'fireball' ? '🔥' : '⚡', px, py + 6, 16, '#fff', '#000', 2);
+      });
+
+      if (game.beachBall.active) {
+        const bb = game.beachBall;
+        const bx = Math.round(bb.x);
+        const by = Math.round(bb.y);
+        const r = bb.r;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(bx, by, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#09192f';
+        ctx.stroke();
+
+        const sliceColors = ['#ef4444', '#facc15', '#3b82f6'];
+        sliceColors.forEach((col, i) => {
+          ctx.beginPath();
+          ctx.moveTo(bx, by);
+          ctx.arc(bx, by, r - 2, game.time * 2 + i * 2.1, game.time * 2 + i * 2.1 + 1.05);
+          ctx.closePath();
+          ctx.fillStyle = col;
+          ctx.fill();
+        });
+        ctx.restore();
+      }
+    }
+
+    function renderWaterPoloBall(ball) {
+      ball.trail.forEach(tr => {
+        const col = ball.isFireShot ? 'rgba(255, 107, 53, 0.55)' : (ball.isSkipShot ? 'rgba(255, 213, 65, 0.55)' : 'rgba(255, 255, 255, 0.45)');
+        drawPixelRect(ctx, tr.x - 6, tr.y - tr.z - 6, 12, 12, col);
+      });
+
+      const bx = Math.round(ball.x);
+      const by = Math.round(ball.y - ball.z);
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.beginPath();
+      ctx.ellipse(bx, Math.round(ball.y) + 5, 9, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawPixelRect(ctx, bx - 9, by - 9, 18, 18, '#091526');
+      drawPixelRect(ctx, bx - 7, by - 7, 14, 14, ball.isFireShot ? '#ff6b35' : '#facc15');
+      drawPixelRect(ctx, bx - 7, by - 2, 14, 4, ball.isFireShot ? '#fef08a' : '#1d4ed8');
+      drawPixelRect(ctx, bx - 2, by - 7, 4, 14, ball.isFireShot ? '#fef08a' : '#ef233c');
+      drawPixelRect(ctx, bx - 5, by - 5, 3, 3, '#ffffff');
+    }
+
+    function renderHUD() {
+      drawPixelRect(ctx, 160, 8, LOGICAL_W - 320, 46, 'rgba(6, 19, 36, 0.92)');
       ctx.strokeStyle = '#ffd541';
       ctx.lineWidth = 3;
-      ctx.strokeRect(LOGICAL_W / 2 - 340, 62, 680, 44);
-      drawOutlinedText(ctx, msg, LOGICAL_W / 2, 91, 18, '#ffd541', '#061324', 3);
+      ctx.strokeRect(160, 8, LOGICAL_W - 320, 46);
+
+      const redTag = (mp.active && mp.role === 'host') ? '紅隊 (你)' : '紅隊 主場';
+      const blueTag = (mp.active && mp.role === 'guest') ? '藍隊 (你)' : (mp.active ? '藍隊 對手' : '藍隊 客隊');
+
+      drawPixelRect(ctx, 168, 14, 118, 34, '#dc2626');
+      drawOutlinedText(ctx, redTag, 227, 36, 15, '#ffffff', '#450a0a', 3);
+      drawOutlinedText(ctx, `${game.scoreRed}`, 314, 41, 30, '#ffd541', '#061324', 4);
+
+      drawPixelRect(ctx, LOGICAL_W - 286, 14, 118, 34, '#2563eb');
+      drawOutlinedText(ctx, blueTag, LOGICAL_W - 227, 36, 15, '#ffffff', '#172554', 3);
+      drawOutlinedText(ctx, `${game.scoreBlue}`, LOGICAL_W - 314, 41, 30, '#ffd541', '#061324', 4);
+
+      if (mp.active) {
+        drawOutlinedText(ctx, `🌐 房號 #${mp.roomCode}`, 98, 35, 13, '#29e5ff', '#061324', 3);
+      }
+
+      if (game.screen === 'shootout') {
+        const so = game.shootout;
+        const roundTag = so.round > 5 ? `🔥 突然死亡 第${so.round}輪` : `⚖️ 互射五碼 第${so.round}/5輪`;
+        drawOutlinedText(ctx, roundTag, LOGICAL_W / 2, 27, 14, '#ffd541', '#061324', 3);
+        const timerTxt = so.phase === 'aiming' ? `限時 ${Math.max(0, Math.ceil(so.shotTimer))}s` : 'PENALTY';
+        drawOutlinedText(ctx, timerTxt, LOGICAL_W / 2, 47, 16, '#38e54d', '#061324', 3);
+      } else {
+        const mins = Math.floor(Math.max(0, game.periodTime) / 60);
+        const secs = Math.floor(Math.max(0, game.periodTime) % 60);
+        const timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        drawOutlinedText(ctx, `第 ${game.period}/${game.maxPeriods} 節  ${timeStr}`, LOGICAL_W / 2, 27, 15, '#7ee8fa', '#061324', 3);
+
+        const scInt = Math.max(0, Math.ceil(game.shotClock));
+        const scColor = scInt <= 5 ? '#ff4b5c' : '#38e54d';
+        drawOutlinedText(ctx, `進攻時限: ${scInt}s`, LOGICAL_W / 2, 47, 15, scColor, '#061324', 3);
+      }
+
+      const activeCtrl = game.controlledPlayer;
+      const activeTimers = (mp.active && mp.role === 'guest') ? mp.remoteTimers : inputTimers;
+
+      if (activeCtrl && game.ball.owner === activeCtrl && activeTimers.shootWasPressed && activeTimers.shootHeldTime > 0.06) {
+        const charge = Math.min(1.0, activeTimers.shootHeldTime / 0.72);
+        const barW = 74;
+        const bx = Math.round(activeCtrl.x - barW / 2);
+        const by = Math.round(activeCtrl.y - 54);
+        drawPixelRect(ctx, bx - 2, by - 2, barW + 4, 12, '#061324');
+        const fillCol = charge >= 0.80 ? '#ffd541' : (charge >= 0.45 ? '#fb923c' : '#38bdf8');
+        drawPixelRect(ctx, bx, by, Math.round(barW * charge), 8, fillCol);
+        if (charge >= 0.80) {
+          drawOutlinedText(ctx, '⚡ 彈水必殺！', activeCtrl.x, by - 6, 14, '#ffd541', '#061324', 3);
+        }
+      }
+
+      if (game.screen === 'countdown') {
+        const num = Math.max(1, Math.ceil(game.countdownTimer));
+        drawPixelRect(ctx, 270, 235, 580, 140, 'rgba(6, 19, 36, 0.88)');
+        ctx.strokeStyle = '#ffd541';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(270, 235, 580, 140);
+
+        const headerTxt = game.isSwimOff
+          ? `第 ${game.period} 節開波準備 — 中線衝波！`
+          : '入球後重新開波準備！';
+        drawOutlinedText(ctx, headerTxt, LOGICAL_W / 2, 278, 22, '#7ee8fa', '#061324', 4);
+        drawOutlinedText(ctx, `${num}`, LOGICAL_W / 2, 346, 54, '#ffd541', '#d92638', 6);
+      }
+
+      if (game.screen === 'period_break') {
+        const sec = Math.max(1, Math.ceil(game.breakTimer));
+        drawPixelRect(ctx, 240, 225, 640, 156, 'rgba(6, 19, 36, 0.92)');
+        ctx.strokeStyle = '#29e5ff';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(240, 225, 640, 156);
+
+        drawOutlinedText(ctx, '⏸️ 第一節結束 · 節間休息恢復體力！', LOGICAL_W / 2, 270, 22, '#ffd541', '#061324', 4);
+        drawOutlinedText(ctx, `第二節將於 ${sec} 秒後展開中線衝波！`, LOGICAL_W / 2, 314, 18, '#ffffff', '#061324', 3);
+        drawOutlinedText(ctx, `目前比數：紅隊 ${game.scoreRed}  -  ${game.scoreBlue} 藍隊`, LOGICAL_W / 2, 352, 18, '#38e54d', '#061324', 3);
+      }
+
+      if (game.screen === 'penalty_shot') {
+        drawPixelRect(ctx, 280, 62, 560, 44, 'rgba(127, 29, 29, 0.92)');
+        ctx.strokeStyle = '#ffd541';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(280, 62, 560, 44);
+        const roleTip = game.penaltyState.attackingTeam === 'red'
+          ? '🚨 五米極刑罰球！按【射波 K/X】主射破網！'
+          : '🚨 五米極刑防守！上下移動門神並按【K/X】撲救！';
+        drawOutlinedText(ctx, roleTip, LOGICAL_W / 2, 90, 17, '#ffd541', '#061324', 3);
+      }
+
+      if (game.screen === 'shootout') {
+        renderShootoutHUD();
+      }
+
+      if (game.screen === 'goal_celeb') {
+        drawPixelRect(ctx, 210, 250, 700, 108, 'rgba(6, 19, 36, 0.90)');
+        ctx.strokeStyle = '#ffd541';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(210, 250, 700, 108);
+        drawOutlinedText(ctx, game.goalBannerText, LOGICAL_W / 2, 304, 34, '#ffd541', '#d92638', 5);
+        drawOutlinedText(ctx, `紅隊 ${game.scoreRed}  -  ${game.scoreBlue} 藍隊`, LOGICAL_W / 2, 342, 20, '#ffffff', '#061324', 3);
+      }
     }
 
-    function drawGoalCelebrationBanner() {
-      const pulse = 1 + Math.sin(game.time * 16) * 0.04;
-      ctx.save();
-      ctx.translate(LOGICAL_W / 2, 220);
-      ctx.scale(pulse, pulse);
+    function renderShootoutHUD() {
+      const so = game.shootout;
 
-      drawPixelRect(ctx, -350, -44, 700, 88, 'rgba(9, 23, 44, 0.94)');
+      const panelW = 580;
+      const panelX = (LOGICAL_W - panelW) / 2;
+      const panelY = 58;
+      drawPixelRect(ctx, panelX, panelY, panelW, 56, 'rgba(6, 19, 36, 0.94)');
+      ctx.strokeStyle = '#29e5ff';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(panelX, panelY, panelW, 56);
+
+      drawOutlinedText(ctx, `紅隊 (${so.redGoals})`, panelX + 58, panelY + 34, 16, '#ff4b5c', '#061324', 3);
+      const redDisplay = so.redResults.length > 5 ? so.redResults.slice(-5) : so.redResults;
+      for (let i = 0; i < 5; i++) {
+        const cx = panelX + 122 + i * 28;
+        const cy = panelY + 28;
+        const res = redDisplay[i];
+        ctx.beginPath();
+        ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+        ctx.fillStyle = res === 'goal' ? '#38e54d' : (res === 'miss' ? '#ef4444' : '#1e293b');
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#ffd541';
+        ctx.stroke();
+        if (res === 'goal') {
+          drawOutlinedText(ctx, '✓', cx, cy + 5, 13, '#ffffff', '#061324', 2);
+        } else if (res === 'miss') {
+          drawOutlinedText(ctx, '✕', cx, cy + 5, 13, '#ffffff', '#061324', 2);
+        }
+      }
+
+      drawOutlinedText(ctx, 'VS', LOGICAL_W / 2, panelY + 34, 16, '#ffd541', '#061324', 3);
+
+      const blueDisplay = so.blueResults.length > 5 ? so.blueResults.slice(-5) : so.blueResults;
+      for (let i = 0; i < 5; i++) {
+        const cx = LOGICAL_W / 2 + 40 + i * 28;
+        const cy = panelY + 28;
+        const res = blueDisplay[i];
+        ctx.beginPath();
+        ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+        ctx.fillStyle = res === 'goal' ? '#38e54d' : (res === 'miss' ? '#ef4444' : '#1e293b');
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#ffd541';
+        ctx.stroke();
+        if (res === 'goal') {
+          drawOutlinedText(ctx, '✓', cx, cy + 5, 13, '#ffffff', '#061324', 2);
+        } else if (res === 'miss') {
+          drawOutlinedText(ctx, '✕', cx, cy + 5, 13, '#ffffff', '#061324', 2);
+        }
+      }
+      drawOutlinedText(ctx, `(${so.blueGoals}) 藍隊`, panelX + panelW - 58, panelY + 34, 16, '#38bdf8', '#061324', 3);
+
+      if (so.phase === 'intro') {
+        drawPixelRect(ctx, 210, 230, 700, 148, 'rgba(6, 19, 36, 0.94)');
+        ctx.strokeStyle = '#ffd541';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(210, 230, 700, 148);
+        drawOutlinedText(ctx, '⚖️ 法定時間激戰打和！', LOGICAL_W / 2, 282, 26, '#7ee8fa', '#061324', 4);
+        drawOutlinedText(ctx, '進入【互射五碼】決勝負！', LOGICAL_W / 2, 336, 32, '#ffd541', '#d92638', 5);
+        return;
+      }
+
+      if (so.phase === 'result') {
+        drawPixelRect(ctx, 240, 245, 640, 102, 'rgba(6, 19, 36, 0.92)');
+        ctx.strokeStyle = so.lastOutcomeColor;
+        ctx.lineWidth = 4;
+        ctx.strokeRect(240, 245, 640, 102);
+        drawOutlinedText(ctx, so.lastOutcomeText, LOGICAL_W / 2, 296, 30, so.lastOutcomeColor, '#061324', 5);
+        drawOutlinedText(ctx, `五碼比數：紅隊 ${so.redGoals}  -  ${so.blueGoals} 藍隊`, LOGICAL_W / 2, 332, 18, '#ffffff', '#061324', 3);
+        return;
+      }
+
+      const isGuest = mp.active && mp.role === 'guest';
+      const localTeam = isGuest ? 'blue' : 'red';
+      const localIsShooting = (so.turnTeam === localTeam);
+
+      if (so.phase === 'aiming' && !so.shotTaken && localIsShooting) {
+        const goalX = localTeam === 'red' ? POOL.right - 4 : POOL.left + 4;
+        let aimBias = 0;
+        if (keys.up) aimBias = -42;
+        else if (keys.down) aimBias = 42;
+        const aimY = Math.max(POOL.goalTop + 10, Math.min(POOL.goalBottom - 10, POOL.centerY + aimBias));
+        const pulse = 8 + Math.sin(game.time * 12) * 3;
+
+        ctx.save();
+        ctx.strokeStyle = '#ffd541';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(goalX, aimY, pulse, 0, Math.PI * 2);
+        ctx.stroke();
+        drawPixelRect(ctx, goalX - 12, aimY - 1, 24, 2, '#ffd541');
+        drawPixelRect(ctx, goalX - 1, aimY - 12, 2, 24, '#ffd541');
+        ctx.restore();
+      }
+
+      drawPixelRect(ctx, 180, POOL.bottom + 10, LOGICAL_W - 360, 38, 'rgba(6, 19, 36, 0.92)');
       ctx.strokeStyle = '#ffd541';
-      ctx.lineWidth = 5;
-      ctx.strokeRect(-350, -44, 700, 88);
+      ctx.lineWidth = 2;
+      ctx.strokeRect(180, POOL.bottom + 10, LOGICAL_W - 360, 38);
 
-      drawOutlinedText(ctx, game.goalBannerText, 0, 14, 38, '#ffd541', '#ef233c', 4.5);
-      ctx.restore();
+      const promptTxt = localIsShooting
+        ? '🎯 輪到你主射！按【上/下】瞄準角位，長按【K / X】蓄力射門！'
+        : '🧤 輪到你把關！按【上/下】移動龍門，捉準時機按【K / X】撲救！';
+      drawOutlinedText(ctx, promptTxt, LOGICAL_W / 2, POOL.bottom + 35, 16, '#ffd541', '#061324', 3);
     }
 
     // ============================================================================
-    // 12. LIVE PAPER-DOLL PREVIEW RENDERER (IN MAIN MENU - 96x96 HD)
+    // 12. LIVE CHARACTER PREVIEW RENDERER & UI WIRING
     // ============================================================================
-    function renderCustomizerPreview() {
-      if (game.screen !== 'menu') return;
+    function renderCharacterPreview() {
       pCtx.clearRect(0, 0, 96, 96);
-
-      drawPixelRect(pCtx, 0, 0, 96, 96, '#0ea5e9');
-      drawPixelRect(pCtx, 0, 60, 96, 36, '#0284c7');
+      drawPixelRect(pCtx, 0, 0, 96, 56, '#38bdf8');
+      drawPixelRect(pCtx, 0, 56, 96, 40, '#0284c7');
+      drawPixelRect(pCtx, 0, 54, 96, 4, '#bae6fd');
 
       drawSwimmerSprite(pCtx, {
         x: 48,
-        y: 56,
+        y: 62,
         facing: 1,
         team: 'red',
         isGK: false,
         custom: playerProfile,
-        animTime: game.time,
-        swimSpeed: 50,
+        animTime: performance.now() / 1000,
+        swimSpeed: 40,
         state: 'swim',
         isControlled: false,
         labelName: ''
       });
     }
 
-    // ============================================================================
-    // 13. INPUT HANDLING (KEYBOARD + MOBILE TOUCH VIRTUAL GAMEPAD)
-    // ============================================================================
-    window.addEventListener('keydown', e => {
-      if (document.activeElement === document.getElementById('player-name-input')) return;
-      if (document.activeElement === document.getElementById('mp-join-input')) return;
-      if (document.activeElement === document.getElementById('mp-worker-url')) return;
-      const k = e.key.toLowerCase();
-      if (k === 'w' || e.key === 'ArrowUp') keys.up = true;
-      if (k === 's' || e.key === 'ArrowDown') keys.down = true;
-      if (k === 'a' || e.key === 'ArrowLeft') keys.left = true;
-      if (k === 'd' || e.key === 'ArrowRight') keys.right = true;
-      if (k === 'j' || k === 'z') keys.pass = true;
-      if (k === 'k' || k === 'x') keys.shoot = true;
-      if (k === 'l' || e.key === 'Shift') keys.sprint = true;
-    });
-
-    window.addEventListener('keyup', e => {
-      const k = e.key.toLowerCase();
-      if (k === 'w' || e.key === 'ArrowUp') keys.up = false;
-      if (k === 's' || e.key === 'ArrowDown') keys.down = false;
-      if (k === 'a' || e.key === 'ArrowLeft') keys.left = false;
-      if (k === 'd' || e.key === 'ArrowRight') keys.right = false;
-      if (k === 'j' || k === 'z') keys.pass = false;
-      if (k === 'k' || k === 'x') keys.shoot = false;
-      if (k === 'l' || e.key === 'Shift') keys.sprint = false;
-    });
-
-    function setupTouchControls() {
-      const appEl = document.getElementById('app');
-      const touchLayer = document.getElementById('touch-controls');
-      const joyZone = document.getElementById('joystick-zone');
-      const joyKnob = document.getElementById('joystick-knob');
-      const btnPass = document.getElementById('btn-pass');
-      const btnShoot = document.getElementById('btn-shoot');
-      const btnSprint = document.getElementById('btn-sprint');
-
-      const syncPadLayout = active => {
-        touchLayer.classList.toggle('active', active);
-        appEl.classList.toggle('has-touch-pad', active);
-        resizeCanvasToFit();
-      };
-
-      const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
-      if (isTouchDevice) {
-        syncPadLayout(true);
-      }
-
-      document.getElementById('btn-toggle-pad').addEventListener('click', () => {
-        audio.sfxClick();
-        const nextState = !touchLayer.classList.contains('active');
-        syncPadLayout(nextState);
-      });
-
-      let joyTouchId = null;
-      const maxRadius = 38;
-
-      const updateJoystick = (clientX, clientY) => {
-        const rect = joyZone.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        let dx = clientX - cx;
-        let dy = clientY - cy;
-        const dist = Math.hypot(dx, dy);
-        if (dist > maxRadius) {
-          dx = (dx / dist) * maxRadius;
-          dy = (dy / dist) * maxRadius;
-        }
-        joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
-        const dead = 10;
-        keys.left = dx < -dead;
-        keys.right = dx > dead;
-        keys.up = dy < -dead;
-        keys.down = dy > dead;
-      };
-
-      const resetJoystick = () => {
-        joyTouchId = null;
-        joyZone.classList.remove('engaged');
-        joyKnob.style.transform = 'translate(0px, 0px)';
-        keys.up = keys.down = keys.left = keys.right = false;
-      };
-
-      joyZone.addEventListener('touchstart', e => {
-        e.preventDefault();
-        const t = e.changedTouches[0];
-        joyTouchId = t.identifier;
-        joyZone.classList.add('engaged');
-        updateJoystick(t.clientX, t.clientY);
-      }, { passive: false });
-
-      joyZone.addEventListener('touchmove', e => {
-        e.preventDefault();
-        for (let i = 0; i < e.changedTouches.length; i++) {
-          if (e.changedTouches[i].identifier === joyTouchId) {
-            updateJoystick(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
-          }
-        }
-      }, { passive: false });
-
-      joyZone.addEventListener('touchend', e => {
-        for (let i = 0; i < e.changedTouches.length; i++) {
-          if (e.changedTouches[i].identifier === joyTouchId) resetJoystick();
-        }
-      });
-      joyZone.addEventListener('touchcancel', resetJoystick);
-
-      const bindVirtualBtn = (el, keyName) => {
-        const press = e => {
-          e.preventDefault();
-          keys[keyName] = true;
-          el.classList.add('pressed');
-        };
-        const release = e => {
-          e.preventDefault();
-          keys[keyName] = false;
-          el.classList.remove('pressed');
-        };
-        el.addEventListener('touchstart', press, { passive: false });
-        el.addEventListener('touchend', release, { passive: false });
-        el.addEventListener('touchcancel', release, { passive: false });
-        el.addEventListener('mousedown', press);
-        el.addEventListener('mouseup', release);
-        el.addEventListener('mouseleave', release);
-      };
-
-      bindVirtualBtn(btnPass, 'pass');
-      bindVirtualBtn(btnShoot, 'shoot');
-      bindVirtualBtn(btnSprint, 'sprint');
-    }
-
-    // ============================================================================
-    // 14. UI BINDINGS, CUSTOMIZER CONTROLS & RESPONSIVE CANVAS SCALING
-    // ============================================================================
-    function refreshCustomizerLabels() {
+    function updateCustomizerLabels() {
       document.getElementById('val-capStyle').textContent = CUSTOM_OPTIONS.capStyle[playerProfile.capStyle].name;
       document.getElementById('val-capColor').textContent = CUSTOM_OPTIONS.capColor[playerProfile.capColor].name;
       document.getElementById('val-eyewear').textContent = CUSTOM_OPTIONS.eyewear[playerProfile.eyewear].name;
@@ -5038,205 +5500,348 @@
       document.getElementById('val-trunks').textContent = CUSTOM_OPTIONS.trunks[playerProfile.trunks].name;
     }
 
-    function setupUIEvents() {
-      document.querySelectorAll('.cycle-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          audio.sfxClick();
-          const key = btn.dataset.custom;
-          const dir = parseInt(btn.dataset.dir, 10);
-          const len = CUSTOM_OPTIONS[key].length;
-          playerProfile[key] = (playerProfile[key] + dir + len) % len;
-          refreshCustomizerLabels();
-        });
+    document.querySelectorAll('.cycle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.custom;
+        const dir = parseInt(btn.dataset.dir, 10);
+        const list = CUSTOM_OPTIONS[key];
+        playerProfile[key] = (playerProfile[key] + dir + list.length) % list.length;
+        updateCustomizerLabels();
+        audio.sfxClick();
       });
+    });
 
-      document.getElementById('btn-random-look').addEventListener('click', () => {
-        audio.sfxPowerup();
-        Object.keys(CUSTOM_OPTIONS).forEach(k => {
-          playerProfile[k] = Math.floor(Math.random() * CUSTOM_OPTIONS[k].length);
-        });
-        refreshCustomizerLabels();
+    document.getElementById('btn-random-look').addEventListener('click', () => {
+      Object.keys(CUSTOM_OPTIONS).forEach(k => {
+        playerProfile[k] = Math.floor(Math.random() * CUSTOM_OPTIONS[k].length);
       });
+      updateCustomizerLabels();
+      audio.sfxPowerup();
+    });
 
-      const nameInput = document.getElementById('player-name-input');
-      nameInput.addEventListener('input', () => {
-        playerProfile.name = nameInput.value.trim() || '香港飛魚';
-      });
+    document.getElementById('player-name-input').addEventListener('input', e => {
+      playerProfile.name = e.target.value.trim() || '香港飛魚';
+    });
 
-      let selectedMode = 'classic7';
-      document.querySelectorAll('.mode-card').forEach(card => {
-        card.addEventListener('click', () => {
-          audio.sfxClick();
-          document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
-          card.classList.add('selected');
-          selectedMode = card.dataset.mode;
-          if (selectedMode === 'online1v1') {
-            document.getElementById('mp-modal').classList.remove('hidden');
-          }
-        });
-      });
-
-      document.getElementById('btn-start-game').addEventListener('click', () => {
-        playerProfile.name = nameInput.value.trim() || '香港飛魚';
+    let selectedMode = 'classic7';
+    document.querySelectorAll('.mode-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedMode = card.dataset.mode;
+        audio.sfxClick();
         if (selectedMode === 'online1v1') {
-          if (!mp.active || !mp.opponentConnected) {
-            document.getElementById('mp-modal').classList.remove('hidden');
-            setMpLobbyStatus('請先建立或加入 4 位房間編號等待好友！', 'wait');
-            return;
-          }
-          startMatch('online1v1');
-        } else {
-          disconnectMultiplayer();
-          startMatch(selectedMode);
+          document.getElementById('mp-modal').classList.remove('hidden');
         }
       });
+    });
 
-      document.getElementById('btn-mp-lobby').addEventListener('click', () => {
-        audio.sfxClick();
-        document.getElementById('mp-modal').classList.remove('hidden');
-      });
-
-      document.getElementById('btn-close-mp').addEventListener('click', () => {
-        audio.sfxClick();
-        document.getElementById('mp-modal').classList.add('hidden');
-      });
-
-      document.querySelectorAll('.mp-submode-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (mp.active && mp.role === 'guest') {
-            setMpLobbyStatus('賽制由房主決定，請等待房主選擇或開波', 'wait');
-            return;
-          }
+    document.getElementById('btn-start-game').addEventListener('click', () => {
+      playerProfile.name = document.getElementById('player-name-input').value.trim() || '香港飛魚';
+      if (selectedMode === 'online1v1') {
+        if (!mp.active || !mp.opponentConnected) {
+          document.getElementById('mp-modal').classList.remove('hidden');
           audio.sfxClick();
-          setMpSubMode(btn.dataset.submode, true);
-        });
-      });
-
-      document.getElementById('btn-mp-create').addEventListener('click', () => {
-        audio.sfxClick();
-        const code = generateRoomCode();
-        document.getElementById('mp-created-code').textContent = code;
-        connectToCloudflareRoom(code, 'host');
-      });
-
-      document.getElementById('btn-mp-copy').addEventListener('click', () => {
-        const codeText = document.getElementById('mp-created-code').textContent;
-        if (!codeText || codeText === '----') return;
-        const temp = document.createElement('textarea');
-        temp.value = codeText;
-        document.body.appendChild(temp);
-        temp.select();
-        try { document.execCommand('copy'); } catch (e) {}
-        document.body.removeChild(temp);
-        audio.sfxPowerup();
-        setMpLobbyStatus(`已複製房間編號 #${codeText}！快傳給好友吧`, 'ok');
-      });
-
-      document.getElementById('btn-mp-join').addEventListener('click', () => {
-        const rawCode = document.getElementById('mp-join-input').value.trim().toUpperCase();
-        if (!/^[A-Z0-9]{4}$/.test(rawCode)) {
-          setMpLobbyStatus('請輸入有效的 4 位房間編號（例如 8824）', 'err');
           return;
         }
-        audio.sfxClick();
-        connectToCloudflareRoom(rawCode, 'guest');
-      });
+        if (mp.role === 'guest') {
+          setMpLobbyStatus('⏳ 已連線房主！等待房主按「立即開波」...', 'ok');
+          document.getElementById('mp-modal').classList.remove('hidden');
+          return;
+        }
+      }
+      startMatch(selectedMode);
+    });
 
-      document.getElementById('btn-mp-start-now').addEventListener('click', () => {
-        playerProfile.name = nameInput.value.trim() || '香港飛魚';
-        document.getElementById('mp-modal').classList.add('hidden');
-        selectedMode = 'online1v1';
-        startMatch('online1v1');
-      });
-
-      document.getElementById('btn-rematch').addEventListener('click', () => {
-        audio.sfxClick();
-        if (game.mode === 'online1v1' && mp.active) {
-          if (mp.role === 'host') {
-            startMatch('online1v1');
-          } else {
-            document.getElementById('summary-score-line').textContent = '⏳ 等待房主發起再戰一場...';
-          }
+    document.getElementById('btn-rematch').addEventListener('click', () => {
+      if (game.mode === 'online1v1' && mp.active) {
+        if (mp.role === 'host') {
+          startMatch('online1v1');
         } else {
-          startMatch(game.mode);
+          sendMpMessage({ type: 'rematch_request' });
+          document.getElementById('summary-score-line').textContent = '⏳ 已通知房主！等待房主發起再戰一場...';
+          audio.sfxClick();
+        }
+      } else {
+        startMatch(game.mode);
+      }
+    });
+
+    function returnToMenu() {
+      if (mp.active) {
+        disconnectMultiplayer();
+      }
+      game.screen = 'menu';
+      game.shootout.active = false;
+      document.getElementById('summary-overlay').classList.add('hidden');
+      document.getElementById('menu-overlay').classList.remove('hidden');
+      document.getElementById('btn-home').classList.add('hidden');
+      audio.startBGM('menu');
+    }
+
+    document.getElementById('btn-back-menu').addEventListener('click', returnToMenu);
+    document.getElementById('btn-home').addEventListener('click', returnToMenu);
+
+    // 1v1 Multiplayer Lobby Modal Wiring
+    document.getElementById('btn-mp-lobby').addEventListener('click', () => {
+      document.getElementById('mp-modal').classList.remove('hidden');
+      audio.sfxClick();
+    });
+
+    document.getElementById('btn-close-mp').addEventListener('click', () => {
+      document.getElementById('mp-modal').classList.add('hidden');
+      audio.sfxClick();
+    });
+
+    document.querySelectorAll('.mp-submode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (mp.active && mp.role === 'guest') {
+          setMpLobbyStatus('⚠️ 賽制由房主決定，請等待房主選擇！', 'wait');
+          return;
+        }
+        setMpSubMode(btn.dataset.submode, true);
+        audio.sfxClick();
+        if (mp.active && mp.role === 'host') {
+          setMpLobbyStatus(`房間 #${mp.roomCode} 已切換為 ${getSubModeLabel(mp.subMode)}`, 'ok');
         }
       });
+    });
 
-      const returnToMenu = () => {
+    document.getElementById('btn-mp-create').addEventListener('click', () => {
+      const code = generateRoomCode();
+      document.getElementById('mp-created-code').textContent = code;
+      document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+      document.getElementById('mode-online1v1').classList.add('selected');
+      selectedMode = 'online1v1';
+      connectToCloudflareRoom(code, 'host');
+      audio.sfxClick();
+    });
+
+    document.getElementById('btn-mp-copy').addEventListener('click', () => {
+      const code = document.getElementById('mp-created-code').textContent.trim();
+      if (code && code !== '----') {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(code).catch(() => {});
+        } else {
+          const tmp = document.createElement('textarea');
+          tmp.value = code;
+          document.body.appendChild(tmp);
+          tmp.select();
+          try { document.execCommand('copy'); } catch (e) {}
+          document.body.removeChild(tmp);
+        }
+        setMpLobbyStatus(`📋 已複製房間編號 #${code}！快傳給好友吧`, 'ok');
         audio.sfxClick();
-        game.screen = 'menu';
-        document.getElementById('summary-overlay').classList.add('hidden');
-        document.getElementById('menu-overlay').classList.remove('hidden');
-        document.getElementById('btn-home').classList.add('hidden');
-        audio.startBGM('menu');
-      };
+      }
+    });
 
-      document.getElementById('btn-back-menu').addEventListener('click', returnToMenu);
-      document.getElementById('btn-home').addEventListener('click', returnToMenu);
+    document.getElementById('btn-mp-join').addEventListener('click', () => {
+      const rawCode = document.getElementById('mp-join-input').value.trim().toUpperCase();
+      if (rawCode.length !== 4) {
+        setMpLobbyStatus('⚠️ 請輸入 4 位數字或英文字母房間編號！', 'err');
+        return;
+      }
+      document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+      document.getElementById('mode-online1v1').classList.add('selected');
+      selectedMode = 'online1v1';
+      connectToCloudflareRoom(rawCode, 'guest');
+      audio.sfxClick();
+    });
 
-      const audioBtn = document.getElementById('btn-toggle-audio');
-      audioBtn.addEventListener('click', () => {
-        const on = audio.toggle();
-        audioBtn.textContent = on ? '🔊 音效' : '🔇 靜音';
-      });
+    document.getElementById('btn-mp-start-now').addEventListener('click', () => {
+      document.getElementById('mp-modal').classList.add('hidden');
+      startMatch('online1v1');
+    });
 
-      const helpModal = document.getElementById('help-modal');
-      document.getElementById('btn-help').addEventListener('click', () => {
-        audio.sfxClick();
-        helpModal.classList.remove('hidden');
-      });
-      document.getElementById('btn-close-help').addEventListener('click', () => {
-        audio.sfxClick();
-        helpModal.classList.add('hidden');
-      });
-    }
+    document.getElementById('btn-toggle-audio').addEventListener('click', e => {
+      const on = audio.toggle();
+      e.target.textContent = on ? '🔊 音效' : '🔇 靜音';
+    });
 
-    function resizeCanvasToFit() {
-      const wrapper = document.getElementById('canvas-wrapper');
-      const availW = wrapper.clientWidth - 8;
-      const availH = wrapper.clientHeight - 8;
-      const aspect = LOGICAL_W / LOGICAL_H;
+    document.getElementById('btn-help').addEventListener('click', () => {
+      document.getElementById('help-modal').classList.remove('hidden');
+      audio.sfxClick();
+    });
 
-      let drawW = availW;
-      let drawH = drawW / aspect;
-      if (drawH > availH) {
-        drawH = availH;
-        drawW = drawH * aspect;
+    document.getElementById('btn-close-help').addEventListener('click', () => {
+      document.getElementById('help-modal').classList.add('hidden');
+      audio.sfxClick();
+    });
+
+    // ============================================================================
+    // 13. KEYBOARD, VIRTUAL TOUCH CONTROLS & RESPONSIVE CANVAS SCALING
+    // ============================================================================
+    window.addEventListener('keydown', e => {
+      if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+
+      const code = e.code;
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(code)) {
+        e.preventDefault();
       }
 
-      canvas.style.width = `${Math.max(280, Math.floor(drawW))}px`;
-      canvas.style.height = `${Math.max(158, Math.floor(drawH))}px`;
+      if (code === 'KeyW' || code === 'ArrowUp') keys.up = true;
+      if (code === 'KeyS' || code === 'ArrowDown') keys.down = true;
+      if (code === 'KeyA' || code === 'ArrowLeft') keys.left = true;
+      if (code === 'KeyD' || code === 'ArrowRight') keys.right = true;
+      if (code === 'KeyJ' || code === 'KeyZ') keys.pass = true;
+      if (code === 'KeyK' || code === 'KeyX' || code === 'Space') keys.shoot = true;
+      if (code === 'KeyL' || code === 'ShiftLeft' || code === 'ShiftRight') keys.sprint = true;
+    });
+
+    window.addEventListener('keyup', e => {
+      const code = e.code;
+      if (code === 'KeyW' || code === 'ArrowUp') keys.up = false;
+      if (code === 'KeyS' || code === 'ArrowDown') keys.down = false;
+      if (code === 'KeyA' || code === 'ArrowLeft') keys.left = false;
+      if (code === 'KeyD' || code === 'ArrowRight') keys.right = false;
+      if (code === 'KeyJ' || code === 'KeyZ') keys.pass = false;
+      if (code === 'KeyK' || code === 'KeyX' || code === 'Space') keys.shoot = false;
+      if (code === 'KeyL' || code === 'ShiftLeft' || code === 'ShiftRight') keys.sprint = false;
+    });
+
+    const touchControls = document.getElementById('touch-controls');
+    const appContainer = document.getElementById('app');
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (isTouchDevice) {
+      touchControls.classList.add('active');
+      appContainer.classList.add('has-touch-pad');
     }
 
-    // ============================================================================
-    // 15. MAIN ANIMATION LOOP & WINDOW ONLOAD BOOTSTRAP
-    // ============================================================================
-    let lastFrameTime = 0;
+    document.getElementById('btn-toggle-pad').addEventListener('click', () => {
+      const active = touchControls.classList.toggle('active');
+      appContainer.classList.toggle('has-touch-pad', active);
+      setTimeout(resizeCanvas, 20);
+      audio.sfxClick();
+    });
 
-    function mainLoop(timestamp) {
-      if (!lastFrameTime) lastFrameTime = timestamp;
-      const dt = (timestamp - lastFrameTime) / 1000;
-      lastFrameTime = timestamp;
+    const joyZone = document.getElementById('joystick-zone');
+    const joyKnob = document.getElementById('joystick-knob');
+    let joyTouchId = null;
 
-      updateGame(dt);
+    function updateJoystick(clientX, clientY) {
+      const rect = joyZone.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const maxR = rect.width * 0.36;
+
+      let dx = clientX - cx;
+      let dy = clientY - cy;
+      const dist = Math.hypot(dx, dy);
+      if (dist > maxR) {
+        dx = (dx / dist) * maxR;
+        dy = (dy / dist) * maxR;
+      }
+
+      joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+
+      const deadzone = 10;
+      keys.left = dx < -deadzone;
+      keys.right = dx > deadzone;
+      keys.up = dy < -deadzone;
+      keys.down = dy > deadzone;
+    }
+
+    function resetJoystick() {
+      joyTouchId = null;
+      joyZone.classList.remove('engaged');
+      joyKnob.style.transform = 'translate(0px, 0px)';
+      keys.left = false;
+      keys.right = false;
+      keys.up = false;
+      keys.down = false;
+    }
+
+    joyZone.addEventListener('touchstart', e => {
+      e.preventDefault();
+      audio.init();
+      const t = e.changedTouches[0];
+      joyTouchId = t.identifier;
+      joyZone.classList.add('engaged');
+      updateJoystick(t.clientX, t.clientY);
+    }, { passive: false });
+
+    joyZone.addEventListener('touchmove', e => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        if (t.identifier === joyTouchId) {
+          updateJoystick(t.clientX, t.clientY);
+        }
+      }
+    }, { passive: false });
+
+    joyZone.addEventListener('touchend', e => {
+      for (const t of e.changedTouches) {
+        if (t.identifier === joyTouchId) resetJoystick();
+      }
+    });
+    joyZone.addEventListener('touchcancel', resetJoystick);
+
+    function bindVirtualButton(btnId, keyName) {
+      const btn = document.getElementById(btnId);
+      const press = e => {
+        e.preventDefault();
+        audio.init();
+        keys[keyName] = true;
+        btn.classList.add('pressed');
+      };
+      const release = e => {
+        e.preventDefault();
+        keys[keyName] = false;
+        btn.classList.remove('pressed');
+      };
+      btn.addEventListener('touchstart', press, { passive: false });
+      btn.addEventListener('touchend', release, { passive: false });
+      btn.addEventListener('touchcancel', release, { passive: false });
+      btn.addEventListener('mousedown', press);
+      btn.addEventListener('mouseup', release);
+      btn.addEventListener('mouseleave', release);
+    }
+
+    bindVirtualButton('btn-pass', 'pass');
+    bindVirtualButton('btn-shoot', 'shoot');
+    bindVirtualButton('btn-sprint', 'sprint');
+
+    function resizeCanvas() {
+      const wrapper = document.getElementById('canvas-wrapper');
+      const ww = wrapper.clientWidth - 8;
+      const wh = wrapper.clientHeight - 8;
+      const targetRatio = LOGICAL_W / LOGICAL_H;
+
+      let finalW = ww;
+      let finalH = ww / targetRatio;
+      if (finalH > wh) {
+        finalH = wh;
+        finalW = wh * targetRatio;
+      }
+      canvas.style.width = `${Math.floor(finalW)}px`;
+      canvas.style.height = `${Math.floor(finalH)}px`;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    // ============================================================================
+    // 14. MAIN 60FPS GAME LOOP BOOTSTRAP
+    // ============================================================================
+    loadRecords();
+    updateCustomizerLabels();
+    resizeCanvas();
+
+    let lastTimestamp = performance.now();
+    function mainLoop(now) {
+      const rawDt = Math.min(0.1, (now - lastTimestamp) / 1000);
+      lastTimestamp = now;
+
+      if (game.screen === 'menu') {
+        renderCharacterPreview();
+      }
+
+      updateGame(rawDt);
       renderGame();
-      renderCustomizerPreview();
 
       requestAnimationFrame(mainLoop);
     }
 
-    window.onload = function () {
-      loadRecords();
-      initSpectators();
-      refreshCustomizerLabels();
-      setupUIEvents();
-      setupTouchControls();
-      resizeCanvasToFit();
-      window.addEventListener('resize', resizeCanvasToFit);
-
-      game.screen = 'menu';
-      requestAnimationFrame(mainLoop);
-    };
+    requestAnimationFrame(mainLoop);
   </script>
 </body>
 </html>
