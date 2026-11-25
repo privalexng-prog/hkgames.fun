@@ -180,7 +180,15 @@
 
   <!-- Main Game Canvas -->
   <canvas id="gameCanvas"></canvas>
-
+<!-- Top-Left Creator Credit & Back Button -->
+  <div class="fixed top-2 left-2 z-40 flex items-center gap-2 pointer-events-auto">
+    <span class="px-2 py-1 bg-slate-950/85 border border-amber-500/60 rounded text-[10px] sm:text-xs font-bold text-amber-300 pixel-text">
+      @hkgames.fun
+    </span>
+    <a href="https://hkgames.fun" class="pixel-btn-secondary px-2.5 py-1 text-[10px] sm:text-xs font-bold text-white hover:text-yellow-300">
+      ← 返回 hkgames.fun
+    </a>
+  </div>
   <!-- Top Arcade HUD (Visible during PLAYING) -->
   <div id="hudOverlay" class="hidden fixed top-0 left-0 right-0 z-20 pointer-events-none px-2 pt-2 sm:px-4 sm:pt-3">
     <div class="max-w-4xl mx-auto flex items-start justify-between gap-1.5 sm:gap-3">
