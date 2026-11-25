@@ -115,6 +115,139 @@ async function handleLeaderboard(request, env) {
 }
 
 // ============================================================================
+// 長洲搶包山：極限攀登 全球排行榜 & 即時狀態 API（共用 LEADERBOARD_KV）
+// ============================================================================
+const BUN_LB_KV_KEY = 'lb:cheung_chau_bun:global';
+
+function getBunCorsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Type': 'application/json; charset=utf-8'
+  };
+}
+
+function getHKDateKey() {
+  const hkNow = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  return hkNow.toISOString().slice(0, 10);
+}
+
+function sortBunEntries(list) {
+  return list.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if ((a.duration || 90) !== (b.duration || 90)) return (a.duration || 90) - (b.duration || 90);
+    return (a.updatedAt || 0) - (b.updatedAt || 0);
+  });
+}
+
+async function handleBunLiveStatus(request, env) {
+  const corsHeaders = getBunCorsHeaders();
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+  if (!env.LEADERBOARD_KV) {
+    return new Response(JSON.stringify({ ok: false, error: '尚未綁定 LEADERBOARD_KV' }), { status: 500, headers: corsHeaders });
+  }
+
+  const todayKey = `stats:cheung_chau_bun:challenges:${getHKDateKey()}`;
+  const rawCount = await env.LEADERBOARD_KV.get(todayKey);
+  const todayChallenges = Math.max(1, Number(rawCount) || 0);
+
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      onlineClimbers: 1,
+      todayChallenges
+    }),
+    { headers: corsHeaders }
+  );
+}
+
+async function handleBunLeaderboardGet(request, env) {
+  const corsHeaders = getBunCorsHeaders();
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+  if (!env.LEADERBOARD_KV) {
+    return new Response(JSON.stringify({ ok: false, error: '尚未綁定 LEADERBOARD_KV' }), { status: 500, headers: corsHeaders });
+  }
+
+  const raw = await env.LEADERBOARD_KV.get(BUN_LB_KV_KEY);
+  const leaderboard = raw ? JSON.parse(raw) : [];
+  return new Response(JSON.stringify({ ok: true, leaderboard }), { headers: corsHeaders });
+}
+
+async function handleBunSubmitScore(request, env) {
+  const corsHeaders = getBunCorsHeaders();
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ ok: false, error: 'Method Not Allowed' }), { status: 405, headers: corsHeaders });
+  }
+  if (!env.LEADERBOARD_KV) {
+    return new Response(JSON.stringify({ ok: false, error: '尚未綁定 LEADERBOARD_KV' }), { status: 500, headers: corsHeaders });
+  }
+
+  try {
+    const body = await request.json();
+    const name = String(body.name || '無名健兒').trim().slice(0, 14) || '無名健兒';
+    const rawScore = Math.floor(Number(body.score) || 0);
+    const score = Math.max(0, Math.min(2500, rawScore));
+    const duration = Math.max(0, Math.min(90.5, Number((Number(body.duration) || 0).toFixed(1))));
+    const isDQ = Boolean(body.isDQ);
+    const title = String(body.title || '長洲平安包健兒').trim().slice(0, 30);
+
+    // 累計今日挑戰人數
+    const todayKey = `stats:cheung_chau_bun:challenges:${getHKDateKey()}`;
+    const prevCount = Number(await env.LEADERBOARD_KV.get(todayKey)) || 0;
+    await env.LEADERBOARD_KV.put(todayKey, String(prevCount + 1), { expirationTtl: 60 * 60 * 48 });
+
+    const raw = await env.LEADERBOARD_KV.get(BUN_LB_KV_KEY);
+    const entries = raw ? JSON.parse(raw) : [];
+
+    if (!isDQ && score > 0) {
+      const newRecord = {
+        name,
+        score,
+        title,
+        duration,
+        updatedAt: Date.now()
+      };
+
+      const idx = entries.findIndex(e => String(e.name || '').toLowerCase() === name.toLowerCase());
+      if (idx !== -1) {
+        const prev = entries[idx];
+        const isBetter =
+          newRecord.score > prev.score ||
+          (newRecord.score === prev.score && newRecord.duration < (prev.duration || 90));
+        if (isBetter) {
+          entries[idx] = newRecord;
+        }
+      } else {
+        entries.push(newRecord);
+      }
+
+      const topEntries = sortBunEntries(entries).slice(0, 50);
+      await env.LEADERBOARD_KV.put(BUN_LB_KV_KEY, JSON.stringify(topEntries));
+
+      return new Response(
+        JSON.stringify({ ok: true, syncedToCloud: true, leaderboard: topEntries.slice(0, 15) }),
+        { headers: corsHeaders }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true, syncedToCloud: true, leaderboard: sortBunEntries(entries).slice(0, 15) }),
+      { headers: corsHeaders }
+    );
+  } catch (err) {
+    return new Response(JSON.stringify({ ok: false, error: '資料格式錯誤' }), { status: 400, headers: corsHeaders });
+  }
+}
+
+// ============================================================================
 // 水球大亂鬥 1v1 連線路由（同時支援 /ws/room/XXXX 同 /api/waterpolo/ws）
 // ============================================================================
 async function handleWaterPoloWS(request, env, roomCode) {
@@ -135,9 +268,26 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // 1. 地鐵轉車生存戰排行榜
+    // 1. 排行榜路由（自動區分「長洲搶包山」與「地鐵轉車生存戰」）
     if (url.pathname === '/api/leaderboard' || url.pathname === '/api/leaderboard/') {
+      const isMtrQuery =
+        url.searchParams.has('station') ||
+        url.searchParams.has('difficulty') ||
+        url.searchParams.get('game') === 'mtr_transfer_survival';
+
+      if (!isMtrQuery && (request.method === 'GET' || request.method === 'OPTIONS')) {
+        return handleBunLeaderboardGet(request, env);
+      }
       return handleLeaderboard(request, env);
+    }
+
+    // 1b. 長洲搶包山：即時連線狀態與上傳成績
+    if (url.pathname === '/api/live-status' || url.pathname === '/api/live-status/') {
+      return handleBunLiveStatus(request, env);
+    }
+
+    if (url.pathname === '/api/submit-score' || url.pathname === '/api/submit-score/') {
+      return handleBunSubmitScore(request, env);
     }
 
     // 2. 水球大亂鬥 1v1 WebSocket 連線（/ws/room/7396）
