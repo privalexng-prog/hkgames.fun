@@ -505,7 +505,8 @@
     }
 
     .game-card:hover .mtr-sign,
-    .game-card:hover .wp-sign {
+    .game-card:hover .wp-sign,
+    .game-card:hover .bun-sign {
       transform: scale(1.04);
     }
 
@@ -555,6 +556,36 @@
       letter-spacing: 1px;
       color: #7dd3fc;
     }
+    /* 插喺第 557 行下面（第 559 行之前）：Pixel Bun Festival Sign Overlay */
+    .bun-sign {
+      position: relative;
+      z-index: 2;
+      background: #7f1d1d;
+      border: 4px solid #facc15;
+      box-shadow:
+        inset 0 0 0 2px #991b1b,
+        4px 4px 0px rgba(0, 0, 0, 0.7);
+      padding: 10px 18px;
+      color: #ffffff;
+      text-align: center;
+    }
+
+    .bun-sign .zh {
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      display: block;
+      color: #fef08a;
+      text-shadow: 2px 2px 0px #000000;
+    }
+
+    .bun-sign .en {
+      font-family: 'Silkscreen', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #fca5a5;
+    }    
 
     /* Mystery Cartridge White Square with Black Question Mark */
     .mystery-box {
@@ -828,8 +859,29 @@
         </div>
       </div>
     </a>
+    <!-- GAME 3: CHEUNG CHAU BUN FESTIVAL -->
+    <a href="./bun-festival/" class="game-card" data-tags="playable hk">
+      <div class="thumb">
+        <canvas id="bunCanvas" width="160" height="92"></canvas>
+        <span class="badge new">16-BIT • 有得玩</span>
+        <div class="bun-sign">
+          <span class="zh">長洲搶包山</span>
+          <span class="en">BUN FESTIVAL</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-title">長洲搶包山</div>
+        <p class="card-desc">
+          限時 90 秒衝上 24 米竹棚搶平安包！背袋無限大任你搶，但要頂住長洲海風、濕滑青苔、遊客閃光燈同偷包海鷗，響鑼前雙腳落地先算贏！
+        </p>
+        <div class="card-footer">
+          <span>街機攀爬 • 24米巨型包山</span>
+          <span class="play-cta">START ▶</span>
+        </div>
+      </div>
+    </a>
 
-    <!-- GAME 3: MYSTERY SLOT ??? -->
+    <!-- GAME 4: MYSTERY SLOT ??? -->
     <div class="game-card coming-soon" data-tags="soon" onclick="wiggleCard(this)">
       <div class="thumb">
         <canvas id="mysteryCanvas" width="160" height="92"></canvas>
@@ -1066,6 +1118,104 @@
         ctx.fillRect(126, 56, 8, 3);
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(122, 65, 14, 2);
+      }
+      // 2.5 Cheung Chau Bun Festival 16-Bit Pixel Art Scene
+      const bunCanvas = document.getElementById('bunCanvas');
+      if (bunCanvas) {
+        const ctx = bunCanvas.getContext('2d');
+        const W = bunCanvas.width;
+        const H = bunCanvas.height;
+
+        // Deep Night Sky
+        ctx.fillStyle = '#070b19';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#11224a';
+        ctx.fillRect(0, 36, W, H - 36);
+
+        // Twinkling Pixel Stars
+        ctx.fillStyle = '#fef9c3';
+        [[14, 10], [32, 22], [48, 8], [116, 18], [148, 28], [22, 42], [138, 44]].forEach(([sx, sy]) => {
+          ctx.fillRect(sx, sy, 2, 2);
+        });
+
+        // Full Moon (Top Right)
+        ctx.fillStyle = '#fde047';
+        ctx.fillRect(132, 7, 14, 14);
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(134, 9, 10, 10);
+
+        // Pixel Firework Burst (Left Sky)
+        ctx.fillStyle = '#fb7185';
+        [[24, 18], [20, 14], [28, 14], [20, 22], [28, 22], [24, 12], [24, 24], [18, 18], [30, 18]].forEach(([fx, fy]) => {
+          ctx.fillRect(fx, fy, 2, 2);
+        });
+
+        // Conical Bamboo Bun Mountain Core
+        ctx.fillStyle = '#29180c';
+        ctx.beginPath();
+        ctx.moveTo(52, H - 10);
+        ctx.lineTo(66, 0);
+        ctx.lineTo(94, 0);
+        ctx.lineTo(108, H - 10);
+        ctx.closePath();
+        ctx.fill();
+
+        // Horizontal Bamboo Cross-Poles
+        ctx.fillStyle = '#b45309';
+        for (let y = 6; y < H - 10; y += 9) {
+          const spread = Math.floor((y / H) * 14);
+          ctx.fillRect(62 - spread, y, 36 + spread * 2, 2);
+        }
+
+        // 3 Vertical Bamboo Climbing Poles
+        ctx.fillStyle = '#d97706';
+        [67, 80, 93].forEach((px) => {
+          ctx.fillRect(px - 1, 0, 2, H - 10);
+        });
+
+        // Ping An Buns (White dough + Red stamp) & Golden Buns
+        for (let y = 5; y < H - 14; y += 9) {
+          [67, 80, 93].forEach((px, idx) => {
+            const isGold = (y === 23 && idx === 0) || (y === 59 && idx === 2);
+            ctx.fillStyle = isGold ? '#facc15' : '#fffbeb';
+            ctx.fillRect(px - 3, y - 2, 6, 5);
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(px - 1, y - 1, 2, 2);
+          });
+        }
+
+        // Hero Climber on Right Pole (Red headband, white shirt, blue shorts, white sack)
+        const cx = 96;
+        const cy = 54;
+        ctx.fillStyle = '#f8fafc'; // Bun sack
+        ctx.fillRect(cx + 3, cy + 3, 6, 7);
+        ctx.fillStyle = '#dc2626'; // Red dot on sack
+        ctx.fillRect(cx + 5, cy + 5, 2, 2);
+        ctx.fillStyle = '#ef4444'; // Red headband
+        ctx.fillRect(cx - 1, cy, 5, 2);
+        ctx.fillStyle = '#fdba74'; // Face & arm
+        ctx.fillRect(cx - 1, cy + 2, 4, 3);
+        ctx.fillRect(cx - 3, cy + 4, 2, 2);
+        ctx.fillStyle = '#ffffff'; // White singlet
+        ctx.fillRect(cx - 1, cy + 5, 5, 4);
+        ctx.fillStyle = '#1d4ed8'; // Blue shorts
+        ctx.fillRect(cx - 1, cy + 9, 5, 3);
+
+        // Cheung Chau Plaza & Red/Gold Safety Mat
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, H - 10, W, 10);
+        ctx.fillStyle = '#991b1b';
+        ctx.fillRect(46, H - 11, 68, 4);
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(46, H - 11, 68, 1);
+
+        // Cheering Crowd Dots
+        const crowdColors = ['#ef4444', '#facc15', '#38bdf8', '#4ade80', '#f472b6'];
+        for (let x = 6; x < W - 6; x += 6) {
+          if (x > 42 && x < 116) continue;
+          ctx.fillStyle = crowdColors[(x / 6) % crowdColors.length];
+          ctx.fillRect(x, H - 14, 3, 4);
+        }
       }
 
       // 3. Mystery Locked Cartridge Pixel Art Scene
