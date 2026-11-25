@@ -180,63 +180,82 @@
 
   <!-- Main Game Canvas -->
   <canvas id="gameCanvas"></canvas>
-<!-- Top-Left Creator Credit & Back Button -->
-  <div class="fixed top-2 left-2 z-40 flex items-center gap-2 pointer-events-auto">
-    <span class="px-2 py-1 bg-slate-950/85 border border-amber-500/60 rounded text-[10px] sm:text-xs font-bold text-amber-300 pixel-text">
+<!-- Mobile Layout Optimization Styles -->
+  <style>
+    @media (max-width: 639px) {
+      .touch-dpad-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 14px;
+      }
+      .touch-action-btn {
+        min-width: 58px;
+        min-height: 60px;
+      }
+      #gameOverScreen {
+        padding-top: 2.75rem;
+      }
+    }
+  </style>
+
+  <!-- Top-Left Creator Credit & Back Button -->
+  <div class="fixed top-[max(0.4rem,env(safe-area-inset-top))] left-2 z-40 flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+    <span class="px-1.5 py-0.5 sm:px-2 sm:py-1 bg-slate-950/90 border border-amber-500/60 rounded text-[9px] sm:text-xs font-bold text-amber-300 pixel-text">
       @hkgames.fun
     </span>
-    <a href="https://hkgames.fun" class="pixel-btn-secondary px-2.5 py-1 text-[10px] sm:text-xs font-bold text-white hover:text-yellow-300">
+    <a href="https://hkgames.fun" class="pixel-btn-secondary px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-xs font-bold text-white hover:text-yellow-300">
       ← 返回 hkgames.fun
     </a>
   </div>
+
   <!-- Top Arcade HUD (Visible during PLAYING) -->
-  <div id="hudOverlay" class="hidden fixed top-0 left-0 right-0 z-20 pointer-events-none px-2 pt-2 sm:px-4 sm:pt-3">
-    <div class="max-w-4xl mx-auto flex items-start justify-between gap-1.5 sm:gap-3">
+  <div id="hudOverlay" class="hidden fixed top-0 left-0 right-0 z-20 pointer-events-none px-1.5 pt-[calc(env(safe-area-inset-top)+2.25rem)] sm:px-4 sm:pt-3">
+    <div class="max-w-4xl mx-auto grid grid-cols-[1fr_auto_1fr] sm:flex sm:items-start sm:justify-between gap-1 sm:gap-3">
 
       <!-- Left HUD: Score, Infinite Bag & Hazard Level -->
-      <div class="pixel-box px-2.5 py-1.5 sm:px-3.5 sm:py-2 pointer-events-auto flex flex-col gap-1 min-w-[125px] sm:min-w-[175px]">
-        <div class="flex items-center justify-between gap-2">
-          <span class="text-[10px] sm:text-xs text-amber-300 font-bold">包袋分數</span>
-          <span id="hudScore" class="text-xs sm:text-base font-black text-white pixel-text">0</span>
+      <div class="pixel-box px-1.5 py-1 sm:px-3.5 sm:py-2 pointer-events-auto flex flex-col gap-0.5 sm:gap-1 min-w-0 sm:min-w-[175px]">
+        <div class="flex items-center justify-between gap-1">
+          <span class="text-[9px] sm:text-xs text-amber-300 font-bold truncate">包袋分數</span>
+          <span id="hudScore" class="text-[11px] sm:text-base font-black text-white pixel-text">0</span>
         </div>
         <!-- Infinite Bag Status -->
-        <div class="flex items-center justify-between text-[9px] sm:text-[10px] text-emerald-300 bg-slate-900/90 px-1.5 py-0.5 rounded border border-emerald-500/40">
-          <span>🎒 無限背袋</span>
-          <span id="hudBagCount" class="font-bold text-white">已搶 0 個</span>
+        <div class="flex items-center justify-between text-[8px] sm:text-[10px] text-emerald-300 bg-slate-900/90 px-1 py-0.5 rounded border border-emerald-500/40">
+          <span class="truncate">🎒 無限袋</span>
+          <span id="hudBagCount" class="font-bold text-white whitespace-nowrap">已搶 0 個</span>
         </div>
         <!-- Altitude & Hazard / Buff badges -->
-        <div class="flex items-center justify-between text-[9px] sm:text-[10px] text-cyan-300 pt-0.5 gap-1">
-          <span id="hudAltitude">高度 0.0m</span>
-          <span id="hudHazardBadge" class="px-1 bg-amber-600/80 text-white rounded text-[8px] font-bold">Lv.1 平靜</span>
-          <span id="hudMochiBadge" class="hidden px-1 bg-pink-600 text-white rounded text-[8px] font-bold">1.5x</span>
+        <div class="flex items-center justify-between text-[8px] sm:text-[10px] text-cyan-300 pt-0.5 gap-1">
+          <span id="hudAltitude" class="whitespace-nowrap">高度 0.0m</span>
+          <span id="hudHazardBadge" class="px-1 bg-amber-600/80 text-white rounded text-[7px] sm:text-[8px] font-bold truncate">Lv.1 平靜</span>
+          <span id="hudMochiBadge" class="hidden px-1 bg-pink-600 text-white rounded text-[7px] sm:text-[8px] font-bold">1.5x</span>
         </div>
       </div>
 
       <!-- Center HUD: 90s Countdown Clock & Ground Safety Status -->
-      <div class="flex flex-col items-center">
-        <div class="pixel-box-red px-3 py-1.5 sm:px-5 sm:py-2 text-center shadow-lg">
-          <div class="text-[8px] sm:text-[10px] text-amber-200 tracking-wider">距離響鑼</div>
-          <div id="hudTimer" class="text-lg sm:text-2xl font-black text-yellow-300 pixel-text leading-tight">90.0</div>
+      <div class="flex flex-col items-center shrink-0">
+        <div class="pixel-box-red px-2 py-1 sm:px-5 sm:py-2 text-center shadow-lg">
+          <div class="text-[7px] sm:text-[10px] text-amber-200 tracking-wider">距離響鑼</div>
+          <div id="hudTimer" class="text-sm sm:text-2xl font-black text-yellow-300 pixel-text leading-tight">90.0</div>
         </div>
-        <div id="hudGroundStatus" class="mt-1 px-2 py-0.5 rounded bg-emerald-950/90 border border-emerald-400 text-[9px] sm:text-[11px] font-bold text-emerald-300 pixel-text whitespace-nowrap">
+        <div id="hudGroundStatus" class="mt-1 px-1.5 py-0.5 rounded bg-emerald-950/90 border border-emerald-400 text-[8px] sm:text-[11px] font-bold text-emerald-300 pixel-text max-w-[126px] sm:max-w-none truncate sm:whitespace-nowrap text-center">
           ✅ 地面安全線
         </div>
       </div>
 
       <!-- Right HUD: Grip Stamina & Quick Controls -->
-      <div class="pixel-box px-2.5 py-1.5 sm:px-3.5 sm:py-2 pointer-events-auto flex flex-col gap-1 min-w-[118px] sm:min-w-[165px]">
+      <div class="pixel-box px-1.5 py-1 sm:px-3.5 sm:py-2 pointer-events-auto flex flex-col gap-0.5 sm:gap-1 min-w-0 sm:min-w-[165px]">
         <div class="flex items-center justify-between gap-1">
-          <span class="text-[10px] sm:text-xs text-emerald-300 font-bold">抓力體力</span>
-          <span id="hudStaminaText" class="text-[10px] sm:text-xs font-bold text-white">100%</span>
+          <span class="text-[9px] sm:text-xs text-emerald-300 font-bold truncate">抓力體力</span>
+          <span id="hudStaminaText" class="text-[9px] sm:text-xs font-bold text-white">100%</span>
         </div>
-        <div class="w-full h-2.5 bg-slate-900 border border-slate-600 rounded-sm overflow-hidden">
+        <div class="w-full h-2 sm:h-2.5 bg-slate-900 border border-slate-600 rounded-sm overflow-hidden">
           <div id="hudStaminaBar" class="h-full bg-emerald-400 transition-all duration-75" style="width: 100%"></div>
         </div>
-        <div class="flex items-center justify-end gap-1.5 pt-0.5">
-          <button id="btnToggleTouch" title="切換觸控按鈕" class="pixel-btn-secondary px-1.5 py-0.5 text-[9px] sm:text-[10px] text-amber-200 font-bold">
+        <div class="flex items-center justify-end gap-1 sm:gap-1.5 pt-0.5">
+          <button id="btnToggleTouch" title="切換觸控按鈕" class="pixel-btn-secondary px-1 py-0.5 text-[8px] sm:text-[10px] text-amber-200 font-bold whitespace-nowrap">
             🎮 觸控
           </button>
-          <button id="btnMute" title="音效開關" class="pixel-btn-secondary px-1.5 py-0.5 text-[9px] sm:text-[10px] text-amber-200 font-bold">
+          <button id="btnMute" title="音效開關" class="pixel-btn-secondary px-1 py-0.5 text-[8px] sm:text-[10px] text-amber-200 font-bold whitespace-nowrap">
             🔊 聲效
           </button>
         </div>
@@ -245,47 +264,49 @@
     </div>
 
     <!-- Wind / Obstacle Alert Banner (Dynamic) -->
-    <div id="windAlertBanner" class="hidden max-w-md mx-auto mt-2 px-3 py-1.5 rounded bg-sky-950/95 border-2 border-cyan-400 text-center shadow-lg">
-      <span id="windAlertText" class="text-xs sm:text-sm font-black text-cyan-200 pixel-text">
+    <div id="windAlertBanner" class="hidden max-w-md mx-auto mt-1.5 sm:mt-2 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded bg-sky-950/95 border-2 border-cyan-400 text-center shadow-lg">
+      <span id="windAlertText" class="text-[10px] sm:text-sm font-black text-cyan-200 pixel-text">
         💨 長洲海風吹襲！按住【抓緊竹棚】！
       </span>
     </div>
 
     <!-- Floating Toast Notification -->
-    <div id="gameToast" class="hidden max-w-xs mx-auto mt-2 px-3 py-1 rounded bg-amber-950/95 border border-amber-400 text-center text-[11px] sm:text-xs font-bold text-amber-200 pixel-text">
+    <div id="gameToast" class="hidden max-w-xs mx-auto mt-1.5 sm:mt-2 px-2.5 py-1 rounded bg-amber-950/95 border border-amber-400 text-center text-[10px] sm:text-xs font-bold text-amber-200 pixel-text">
     </div>
   </div>
 
   <!-- Touch Controls Layer (Phone & iPad) -->
-  <div id="touchControlsLayer" class="hidden fixed inset-x-0 bottom-0 z-20 pointer-events-none px-3 pb-3 sm:px-6 sm:pb-5 flex items-end justify-between">
+  <div id="touchControlsLayer" class="hidden fixed inset-x-0 bottom-0 z-20 pointer-events-none px-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-5 flex items-end justify-between">
     <!-- Bottom-Left: 4-Way Pixel D-Pad -->
-    <div class="pointer-events-auto grid grid-cols-3 gap-1.5 w-[174px] h-[174px] p-1 bg-slate-950/35 rounded-2xl border border-amber-500/30">
+    <div class="pointer-events-auto grid grid-cols-3 gap-1 sm:gap-1.5 w-[144px] h-[144px] sm:w-[174px] sm:h-[174px] p-1 bg-slate-950/45 rounded-2xl border border-amber-500/30">
       <div></div>
       <button id="touchUp" class="touch-dpad-btn" aria-label="向上爬">▲</button>
       <div></div>
       <button id="touchLeft" class="touch-dpad-btn" aria-label="向左橫跳">◀</button>
-      <div class="flex items-center justify-center text-[9px] text-amber-200/70 font-bold">竹棚</div>
+      <div class="flex items-center justify-center text-[8px] sm:text-[9px] text-amber-200/70 font-bold">竹棚</div>
       <button id="touchRight" class="touch-dpad-btn" aria-label="向右橫跳">▶</button>
       <div></div>
       <button id="touchDown" class="touch-dpad-btn" aria-label="向下爬">▼</button>
       <div></div>
     </div>
 
-    <!-- Bottom-Right: Two Large Action Buttons (>= 64px) -->
-    <div class="pointer-events-auto flex items-end gap-2.5 sm:gap-3.5">
-      <button id="touchSlide" class="touch-action-btn px-3 py-2 bg-gradient-to-b from-cyan-600 to-blue-800 border-2 border-cyan-300 text-white" aria-label="極速滑降">
-        <span class="text-base sm:text-lg leading-none mb-1">⚡</span>
-        <span class="text-[11px] sm:text-xs leading-tight">極速滑降</span>
-        <span class="text-[8px] text-cyan-200 mt-0.5">近地鬆手</span>
+    <!-- Bottom-Right: Two Large Action Buttons -->
+    <div class="pointer-events-auto flex items-end gap-2 sm:gap-3.5">
+      <button id="touchSlide" class="touch-action-btn px-2 py-1.5 sm:px-3 sm:py-2 bg-gradient-to-b from-cyan-600 to-blue-800 border-2 border-cyan-300 text-white" aria-label="極速滑降">
+        <span class="text-sm sm:text-lg leading-none mb-0.5 sm:mb-1">⚡</span>
+        <span class="text-[10px] sm:text-xs leading-tight">極速滑降</span>
+        <span class="text-[7px] sm:text-[8px] text-cyan-200 mt-0.5">近地鬆手</span>
       </button>
-      <button id="touchBrace" class="touch-action-btn px-3 py-2 bg-gradient-to-b from-amber-500 to-orange-700 border-2 border-yellow-200 text-slate-950" aria-label="抓緊與搶包">
-        <span class="text-base sm:text-lg leading-none mb-1">✊</span>
-        <span class="text-[11px] sm:text-xs font-black leading-tight">抓緊/搶包</span>
-        <span class="text-[8px] text-amber-950 font-bold mt-0.5">抗風防滑</span>
+      <button id="touchBrace" class="touch-action-btn px-2 py-1.5 sm:px-3 sm:py-2 bg-gradient-to-b from-amber-500 to-orange-700 border-2 border-yellow-200 text-slate-950" aria-label="抓緊與搶包">
+        <span class="text-sm sm:text-lg leading-none mb-0.5 sm:mb-1">✊</span>
+        <span class="text-[10px] sm:text-xs font-black leading-tight">抓緊/搶包</span>
+        <span class="text-[7px] sm:text-[8px] text-amber-950 font-bold mt-0.5">抗風防滑</span>
       </button>
     </div>
   </div>
 
+  <!-- TITLE SCREEN OVERLAY -->
+  <div id="titleScreen" class="fixed inset-0 z-30 flex items-center justify-center px-3 pb-3 pt-11 sm:p-5 bg-slate-950/65 backdrop-blur-[1px]">
   <!-- TITLE SCREEN OVERLAY -->
   <div id="titleScreen" class="fixed inset-0 z-30 flex items-center justify-center p-3 sm:p-5 bg-slate-950/65 backdrop-blur-[1px]">
     <div class="pixel-box w-full max-w-2xl max-h-[94dvh] overflow-y-auto custom-scroll p-4 sm:p-6 flex flex-col gap-3.5">
