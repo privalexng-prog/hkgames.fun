@@ -804,7 +804,11 @@
     // ============================================================================
     // 1. 8-BIT WEB AUDIO API SYNTHESIZER (港鐵關門聲、提示音與復古音效)
     // ============================================================================
-    constructor() {
+    // ============================================================================
+    // 1. 8-BIT WEB AUDIO API SYNTHESIZER (港鐵關門聲、提示音與復古音效)
+    // ============================================================================
+    class RetroAudioEngine {
+      constructor() {
         this.ctx = null;
         this.muted = false;
         this.bgmTimer = null;
@@ -813,7 +817,6 @@
         this.hussSfx = new Audio('huss.mp3');
         this.hussSfx.preload = 'auto';
       }
-
       playHussJump() {
         if (this.muted || !this.hussSfx) return;
         const sfx = this.hussSfx.cloneNode();
