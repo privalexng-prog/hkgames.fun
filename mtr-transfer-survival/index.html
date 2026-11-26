@@ -804,13 +804,21 @@
     // ============================================================================
     // 1. 8-BIT WEB AUDIO API SYNTHESIZER (港鐵關門聲、提示音與復古音效)
     // ============================================================================
-    class RetroAudioEngine {
-      constructor() {
+    constructor() {
         this.ctx = null;
         this.muted = false;
         this.bgmTimer = null;
         this.bgmStep = 0;
         this.focusMode = false;
+        this.hussSfx = new Audio('huss.mp3');
+        this.hussSfx.preload = 'auto';
+      }
+
+      playHussJump() {
+        if (this.muted || !this.hussSfx) return;
+        const sfx = this.hussSfx.cloneNode();
+        sfx.volume = this.focusMode ? 0.35 : 0.85;
+        sfx.play().catch(() => {});
       }
 
       init() {
@@ -2709,9 +2717,13 @@
 
       if (keys.jump && p.z === 0) {
         p.vz = p.jumpPower;
-        audio.playJump();
+        if (world.skin === 'student') {
+          audio.playHussJump();
+        } else {
+          audio.playJump();
+        }
         spawnParticles(p.x, p.y, '#e2e8f0', 6, 80);
-      }
+      }  
       if (p.z > 0 || p.vz > 0) {
         p.z += p.vz * dt;
         p.vz -= p.gravity * dt;
