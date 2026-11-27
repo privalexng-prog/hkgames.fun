@@ -130,6 +130,12 @@
       align-items: center;
       gap: 12px;
     }
+    .hud-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
 
     .brand-tag {
       font-family: 'Silkscreen', 'DotGothic16', monospace;
@@ -163,6 +169,7 @@
     }
 
     .theme-btn {
+      text-decoration: none;
       background: var(--card-bg);
       border: 3px solid var(--border-dark);
       box-shadow:
@@ -760,9 +767,14 @@
       <span class="brand-tag">👾 香港製造 16-BIT</span>
       <span class="insert-coin">CREDIT 01</span>
     </div>
-    <button class="theme-btn" id="themeToggle" aria-label="切換深淺色模式">
-      <span id="themeIcon">🌙</span> <span id="themeLabel">熄燈</span>
-    </button>
+    <div class="hud-right">
+      <a href="https://hkgames.fun/victary-island" class="theme-btn">
+        🏝️ 進入維他利島 (Test)
+      </a>
+      <button class="theme-btn" id="themeToggle" aria-label="切換深淺色模式">
+        <span id="themeIcon">🌙</span> <span id="themeLabel">熄燈</span>
+      </button>
+    </div>
   </div>
 
   <!-- ARCADE HEADER -->
