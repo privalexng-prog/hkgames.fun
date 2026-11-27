@@ -1,0 +1,4702 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>維他利島 Victary Island | hkgames.fun 16-Bit 互動大廳</title>
+  <!-- 載入高清晰繁體中文與復古像素字體（離線時自動優雅降級為系統黑體/等寬字體） -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+TC:wght@500;700;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    /* ==========================================================================
+       1. 基礎與高對比 16-BIT 像素介面樣式
+       ========================================================================== */
+    :root {
+      --ui-font: 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+      --pixel-font: 'DotGothic16', 'Noto Sans TC', monospace;
+      --arcade-font: 'Press Start 2P', 'DotGothic16', monospace;
+      --ui-bg: rgba(15, 23, 42, 0.94);
+      --ui-border-light: #ffffff;
+      --ui-border-mid: #64748b;
+      --ui-border-dark: #090d16;
+      --accent-gold: #ffd43b;
+      --accent-red: #e03131;
+      --accent-blue: #1c7ed6;
+      --accent-green: #2f9e44;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #16609c;
+      font-family: var(--ui-font);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+      touch-action: none;
+    }
+
+    /* 主遊戲畫布：保持銳利 16-bit 像素質感 */
+    #game-canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-crisp-edges;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* 16-bit 雙層像素邊框通用樣式 */
+    .pixel-box {
+      background: var(--ui-bg);
+      color: #f8fafc;
+      border: 3px solid var(--ui-border-light);
+      box-shadow:
+        0 0 0 3px var(--ui-border-dark),
+        inset 0 0 0 2px var(--ui-border-mid),
+        0 6px 14px rgba(0, 0, 0, 0.55);
+      border-radius: 6px;
+    }
+
+    /* ==========================================================================
+       2. 左上角抬頭顯示器 (HUD) 與 右上角可點擊迷你地圖 (MINIMAP)
+       ========================================================================== */
+    #hud-top-left {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .island-badge {
+      padding: 10px 15px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: auto;
+    }
+
+    .island-title {
+      font-family: var(--ui-font);
+      font-size: 17px;
+      font-weight: 900;
+      color: var(--accent-gold);
+      text-shadow: 2px 2px 0 #000;
+      letter-spacing: 0.6px;
+      line-height: 1.3;
+    }
+
+    .island-sub {
+      font-size: 13px;
+      font-weight: 700;
+      color: #f1f5f9;
+      display: block;
+      margin-top: 2px;
+    }
+
+    .hud-btn-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .hud-btn {
+      background: #1e293b;
+      color: #ffffff;
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 0 #000;
+      padding: 6px 11px;
+      font-family: var(--ui-font);
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .hud-btn:hover {
+      background: #334155;
+    }
+    .hud-btn:active {
+      transform: translateY(2px);
+      box-shadow: none;
+    }
+    .hud-btn-gold {
+      background: #b45309;
+      border-color: #ffd43b;
+      color: #fffbeb;
+    }
+    .hud-btn-time {
+      background: #1e3a8a;
+      border-color: #93c5fd;
+      color: #e0f2fe;
+    }
+    .hud-btn-music {
+      background: #065f46;
+      border-color: #6ee7b7;
+      color: #ecfdf5;
+    }
+
+    /* 16-bit 悠閒音樂歌單迷你播放器 */
+    .music-player-bar {
+      padding: 6px 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: auto;
+      background: rgba(15, 23, 42, 0.92);
+      border: 2px solid #93c5fd;
+      border-radius: 6px;
+      box-shadow: 0 3px 0 #090d16;
+      max-width: 92vw;
+    }
+
+    .music-mini-btn {
+      background: #1e293b;
+      color: #ffd43b;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 3px 7px;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+      line-height: 1.2;
+    }
+    .music-mini-btn:hover {
+      background: #334155;
+    }
+    .music-mini-btn:active {
+      transform: translateY(1px);
+    }
+
+    .music-track-info {
+      font-size: 12px;
+      font-weight: 800;
+      color: #e0f2fe;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 230px;
+    }
+
+    /* 狀態列（雪糕加速 / 釣魚戰利品） */
+    #status-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .status-pill {
+      padding: 5px 11px;
+      font-size: 13px;
+      font-weight: 700;
+      background: rgba(15, 23, 42, 0.92);
+      border: 2px solid #ffd43b;
+      color: #ffd43b;
+      border-radius: 5px;
+      box-shadow: 2px 2px 0 #000;
+      display: none;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-pill.active {
+      display: inline-flex;
+    }
+
+    /* 右上角可點擊迷你地圖（支援點擊開啟 Teleport 傳送藍圖） */
+    #minimap-wrapper {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 20;
+      padding: 5px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 3px solid #ffffff;
+      box-shadow: 0 0 0 3px #090d16, 0 6px 12px rgba(0,0,0,0.55);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    #minimap-wrapper:hover {
+      transform: scale(1.03);
+      border-color: var(--accent-gold);
+    }
+    #minimap-wrapper:active {
+      transform: scale(0.98);
+    }
+
+    #minimap-canvas {
+      display: block;
+      width: 148px;
+      height: 118px;
+      image-rendering: pixelated;
+      border-radius: 2px;
+    }
+
+    .minimap-label {
+      text-align: center;
+      font-size: 12px;
+      font-weight: 900;
+      color: #ffd43b;
+      margin-top: 4px;
+      letter-spacing: 0.5px;
+      text-shadow: 1px 1px 0 #000;
+      background: rgba(28, 126, 214, 0.45);
+      padding: 3px 5px;
+      border-radius: 3px;
+    }
+
+    /* ==========================================================================
+       3. 虛擬搖桿 (左下角) 與 紅色 E 互動制 (右下角)
+       ========================================================================== */
+    #controls-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 30;
+    }
+    #controls-layer.hidden {
+      display: none !important;
+    }
+
+    #joystick-zone {
+      position: fixed;
+      bottom: 22px;
+      left: 22px;
+      width: 124px;
+      height: 124px;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+    }
+    #joystick-zone:active {
+      cursor: grabbing;
+    }
+
+    #joystick-base {
+      width: 112px;
+      height: 112px;
+      border-radius: 50%;
+      background: rgba(15, 23, 42, 0.48);
+      border: 3px solid rgba(255, 255, 255, 0.72);
+      box-shadow:
+        0 0 0 3px rgba(9, 13, 22, 0.7),
+        inset 0 0 14px rgba(0, 0, 0, 0.55);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #joystick-base::before,
+    #joystick-base::after {
+      content: '';
+      position: absolute;
+      background: rgba(255, 255, 255, 0.25);
+    }
+    #joystick-base::before {
+      width: 68%;
+      height: 4px;
+    }
+    #joystick-base::after {
+      width: 4px;
+      height: 68%;
+    }
+
+    #joystick-knob {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #f8fafc, #cbd5e1 70%, #475569);
+      border: 3px solid #090d16;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.6), inset 0 2px 0 #fff;
+      position: relative;
+      z-index: 2;
+      transform: translate(0px, 0px);
+      transition: transform 0.05s linear;
+    }
+
+    /* 右下角大粒復古紅色「E / 互動」按鈕 */
+    #action-btn {
+      position: fixed;
+      bottom: 28px;
+      right: 26px;
+      width: 86px;
+      height: 86px;
+      border-radius: 50%;
+      pointer-events: auto;
+      background: radial-gradient(circle at 32% 30%, #ff6b6b, #e03131 65%, #9b1c1c);
+      border: 4px solid #ffffff;
+      box-shadow:
+        0 0 0 3px #090d16,
+        0 7px 0 #6b1111,
+        0 10px 18px rgba(0, 0, 0, 0.55);
+      color: #ffffff;
+      font-family: var(--ui-font);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.06s ease, box-shadow 0.06s ease;
+    }
+
+    #action-btn .btn-letter {
+      font-family: var(--arcade-font);
+      font-size: 21px;
+      line-height: 1.1;
+      text-shadow: 2px 2px 0 #5c0b0b;
+    }
+
+    #action-btn .btn-sub {
+      font-size: 13px;
+      font-weight: 900;
+      margin-top: 3px;
+      letter-spacing: 1px;
+      text-shadow: 1px 1px 0 #5c0b0b;
+    }
+
+    #action-btn:active,
+    #action-btn.pressed {
+      transform: translateY(5px);
+      box-shadow:
+        0 0 0 3px #090d16,
+        0 2px 0 #6b1111,
+        0 4px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    #action-btn.highlight {
+      animation: pulseBtn 0.85s infinite alternate;
+    }
+
+    @keyframes pulseBtn {
+      from { filter: brightness(1); transform: scale(1); }
+      to { filter: brightness(1.22); transform: scale(1.06); }
+    }
+
+    /* 電腦鍵盤操作小提示 */
+    #desktop-hint {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.92);
+      color: #ffffff;
+      padding: 7px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 800;
+      border: 2px solid rgba(255,255,255,0.5);
+      pointer-events: none;
+      z-index: 15;
+      white-space: nowrap;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.55);
+    }
+
+    /* ==========================================================================
+       4. 16-BIT 復古 RPG 對話框與跳轉確認視窗
+       ========================================================================== */
+    #rpg-dialog-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 13, 22, 0.62);
+      z-index: 50;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    #rpg-dialog-overlay.open {
+      display: flex;
+    }
+
+    #rpg-dialog-box {
+      width: 100%;
+      max-width: 680px;
+      padding: 20px 22px;
+      margin-bottom: 14px;
+      position: relative;
+      animation: popUp 0.18s ease-out;
+    }
+
+    @keyframes popUp {
+      from { transform: translateY(18px) scale(0.97); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      border-bottom: 2px dashed rgba(255, 255, 255, 0.3);
+      padding-bottom: 10px;
+    }
+
+    #dialog-icon {
+      font-size: 28px;
+      width: 46px;
+      height: 46px;
+      background: #1e293b;
+      border: 2px solid #ffd43b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+
+    #dialog-title {
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--accent-gold);
+      text-shadow: 2px 2px 0 #000;
+    }
+
+    #dialog-subtitle {
+      font-size: 14px;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-top: 2px;
+    }
+
+    #dialog-text {
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.75;
+      color: #ffffff;
+      min-height: 56px;
+      margin-bottom: 16px;
+      white-space: pre-line;
+    }
+
+    .dialog-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .rpg-btn {
+      font-family: var(--ui-font);
+      font-size: 16px;
+      font-weight: 900;
+      padding: 10px 18px;
+      border: 3px solid #fff;
+      box-shadow: 0 3px 0 #000;
+      border-radius: 5px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .rpg-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #000;
+    }
+
+    .rpg-btn-primary {
+      background: #2f9e44;
+      color: #fff;
+    }
+    .rpg-btn-primary:hover {
+      background: #37b24d;
+    }
+
+    .rpg-btn-secondary {
+      background: #475569;
+      color: #f8fafc;
+    }
+    .rpg-btn-secondary:hover {
+      background: #64748b;
+    }
+
+    /* ==========================================================================
+       5. 藍圖式「維他利島 傳送地圖 (TELEPORT MAP)」視窗
+       ========================================================================== */
+    #teleport-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 13, 22, 0.78);
+      z-index: 65;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+    }
+    #teleport-modal.open {
+      display: flex;
+    }
+
+    .blueprint-window {
+      width: 100%;
+      max-width: 820px;
+      max-height: 92vh;
+      overflow-y: auto;
+      background: #1769aa;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px);
+      background-size: 24px 24px;
+      border: 4px solid #ffffff;
+      box-shadow: 0 0 0 4px #090d16, 0 16px 36px rgba(0, 0, 0, 0.75);
+      border-radius: 6px;
+      animation: popUp 0.18s ease-out;
+      color: #ffffff;
+    }
+
+    .blueprint-titlebar {
+      background: linear-gradient(180deg, #2b4c7e 0%, #162a4c 100%);
+      border-bottom: 3px solid #ffffff;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .blueprint-titlebar h2 {
+      margin: 0;
+      font-size: clamp(14px, 2.8vw, 18px);
+      font-weight: 900;
+      color: #ffd43b;
+      text-shadow: 2px 2px 0 #000;
+      letter-spacing: 0.5px;
+    }
+
+    .blueprint-close-x {
+      background: #e03131;
+      color: #fff;
+      border: 2px solid #fff;
+      font-weight: 900;
+      font-size: 14px;
+      width: 30px;
+      height: 30px;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 2px 0 #000;
+      flex-shrink: 0;
+    }
+
+    .blueprint-body {
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .teleport-map-box {
+      background: rgba(11, 57, 96, 0.7);
+      border: 3px solid #ffffff;
+      border-radius: 6px;
+      padding: 8px;
+      text-align: center;
+    }
+
+    #teleport-canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      image-rendering: pixelated;
+      cursor: crosshair;
+      border: 2px solid rgba(255, 255, 255, 0.45);
+      border-radius: 4px;
+    }
+
+    .teleport-map-hint {
+      font-size: 12px;
+      font-weight: 700;
+      color: #e0f2fe;
+      margin-top: 6px;
+    }
+
+    .teleport-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .tp-spot-btn {
+      background: rgba(15, 23, 42, 0.9);
+      border: 2px solid #ffffff;
+      color: #ffffff;
+      padding: 9px 12px;
+      border-radius: 5px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-family: var(--ui-font);
+      box-shadow: 0 3px 0 #090d16;
+      transition: transform 0.08s ease, background 0.12s ease;
+    }
+    .tp-spot-btn:hover {
+      background: #1e3a8a;
+      border-color: #ffd43b;
+    }
+    .tp-spot-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #090d16;
+    }
+
+    .tp-spot-info {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .tp-spot-icon {
+      font-size: 20px;
+      width: 30px;
+      text-align: center;
+    }
+
+    .tp-spot-name {
+      font-size: 15px;
+      font-weight: 900;
+      color: #ffd43b;
+      display: block;
+    }
+
+    .tp-spot-desc {
+      font-size: 12px;
+      font-weight: 700;
+      color: #e2e8f0;
+      display: block;
+    }
+
+    .tp-go-badge {
+      background: #2f9e44;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 900;
+      padding: 4px 9px;
+      border-radius: 4px;
+      border: 1px solid #fff;
+      flex-shrink: 0;
+    }
+
+    /* ==========================================================================
+       6. 《維多利日報》復古報紙排版視窗 (Newspaper Modal)
+       ========================================================================== */
+    #newspaper-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 13, 22, 0.78);
+      z-index: 60;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    #newspaper-modal.open {
+      display: flex;
+    }
+
+    .newspaper-sheet {
+      background: #f4ebd9;
+      color: #1f1b16;
+      width: 100%;
+      max-width: 760px;
+      max-height: 88vh;
+      overflow-y: auto;
+      border: 4px solid #1f1b16;
+      box-shadow:
+        0 0 0 4px #d8cbb3,
+        0 0 0 8px #1f1b16,
+        0 16px 32px rgba(0, 0, 0, 0.7);
+      padding: 20px 24px;
+      font-family: var(--ui-font);
+      position: relative;
+      animation: popUp 0.2s ease-out;
+    }
+
+    .news-masthead {
+      border-top: 4px double #1f1b16;
+      border-bottom: 4px double #1f1b16;
+      padding: 10px 0;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    .news-masthead h1 {
+      margin: 0;
+      font-size: clamp(26px, 5vw, 38px);
+      font-weight: 900;
+      letter-spacing: 6px;
+      color: #14110e;
+    }
+
+    .news-meta {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      font-size: 13px;
+      font-weight: 700;
+      border-bottom: 2px solid #1f1b16;
+      padding-bottom: 6px;
+      margin-bottom: 14px;
+      color: #4a4035;
+    }
+
+    .news-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 18px;
+    }
+
+    .news-headline-box {
+      border-right: 2px solid #8c7d6b;
+      padding-right: 16px;
+    }
+
+    .news-tag {
+      display: inline-block;
+      background: #b02a2a;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 900;
+      padding: 2px 8px;
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+    }
+
+    .news-article h2 {
+      margin: 4px 0 8px;
+      font-size: 20px;
+      font-weight: 900;
+      line-height: 1.35;
+      border-bottom: 1px solid #8c7d6b;
+      padding-bottom: 6px;
+    }
+
+    .news-article h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+      font-weight: 900;
+      color: #1f1b16;
+    }
+
+    .news-article p {
+      margin: 0 0 10px;
+      font-size: 14px;
+      line-height: 1.65;
+      color: #2c2620;
+    }
+
+    .news-sidebar-item {
+      background: rgba(216, 203, 179, 0.45);
+      border: 1px solid #8c7d6b;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+
+    .news-close-bar {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 3px double #1f1b16;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    /* ==========================================================================
+       7. 浮動提示氣泡 (Toast Notification)
+       ========================================================================== */
+    #toast-container {
+      position: fixed;
+      top: 84px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 45;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      width: 90%;
+      max-width: 460px;
+    }
+
+    .pixel-toast {
+      background: rgba(15, 23, 42, 0.95);
+      color: #ffd43b;
+      border: 2px solid #fff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+      padding: 9px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+      border-radius: 6px;
+      animation: toastIn 0.2s ease-out;
+    }
+
+    @keyframes toastIn {
+      from { transform: translateY(-10px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* 響應式適配（手機與平板） */
+    @media (max-width: 720px) {
+      #minimap-canvas {
+        width: 112px;
+        height: 90px;
+      }
+      .island-title {
+        font-size: 14px;
+      }
+      #desktop-hint {
+        display: none;
+      }
+      .blueprint-body {
+        grid-template-columns: 1fr;
+      }
+      .news-grid {
+        grid-template-columns: 1fr;
+      }
+      .news-headline-box {
+        border-right: none;
+        padding-right: 0;
+        border-bottom: 2px solid #8c7d6b;
+        padding-bottom: 12px;
+      }
+      #joystick-zone {
+        bottom: 16px;
+        left: 14px;
+        width: 112px;
+        height: 112px;
+      }
+      #joystick-base {
+        width: 100px;
+        height: 100px;
+      }
+      #action-btn {
+        bottom: 22px;
+        right: 18px;
+        width: 78px;
+        height: 78px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 主遊戲畫面 Canvas -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- 左上角 HUD 資訊欄 -->
+  <div id="hud-top-left">
+    <div class="pixel-box island-badge">
+      <div>
+        <div class="island-title">🏝️ 維他利島 VICTARY ISLAND</div>
+        <span class="island-sub">hkgames.fun · <span id="clock-display">15:30 下午</span></span>
+      </div>
+      <div class="hud-btn-group">
+        <button id="time-toggle-btn" class="hud-btn hud-btn-time" title="切換日夜時段 (T)">☀️ 切換日夜</button>
+        <button id="open-tp-btn" class="hud-btn hud-btn-gold" title="開啟傳送藍圖 (M)">🗺️ 傳送地圖</button>
+        <button id="controls-toggle-btn" class="hud-btn" title="顯示或隱藏虛擬搖桿與互動制 (H)">🎮 虛擬制:開</button>
+        <button id="sound-toggle-btn" class="hud-btn" title="開關復古音效">🔊 音效:開</button>
+      </div>
+    </div>
+
+    <!-- 16-bit 悠閒音樂歌單控制列 -->
+    <div class="music-player-bar" id="music-bar">
+      <button id="bgm-toggle-btn" class="music-mini-btn hud-btn-music" type="button" title="播放/暫停 16-bit 悠閒音樂 (B)">🎵 音樂:開</button>
+      <button id="bgm-prev-btn" class="music-mini-btn" type="button" title="上一首">⏮</button>
+      <span id="music-track-label" class="music-track-info">♪ 01. 維多利海風 (點擊畫面播放)</span>
+      <button id="bgm-next-btn" class="music-mini-btn" type="button" title="下一首 (N)">⏭</button>
+    </div>
+
+    <div id="status-pills">
+      <div id="speed-pill" class="status-pill">🍦 軟雪糕加速中：<span id="speed-timer">15</span>s</div>
+      <div id="fish-pill" class="status-pill">🎣 釣獲寶物：<span id="fish-count">0</span> 件</div>
+    </div>
+  </div>
+
+  <!-- 右上角可點擊 16-bit 迷你地圖（點擊即開啟 Teleport 傳送視窗） -->
+  <div id="minimap-wrapper" role="button" tabindex="0" title="點擊開啟地圖傳送 (Teleport)">
+    <canvas id="minimap-canvas" width="148" height="118"></canvas>
+    <div class="minimap-label">🗺️ 點擊地圖傳送 (M)</div>
+  </div>
+
+  <!-- 浮動提示訊息容器 -->
+  <div id="toast-container"></div>
+
+  <!-- 電腦鍵盤操作提示 -->
+  <div id="desktop-hint">⌨️ WASD / 方向鍵移動 · [E] 互動 · [T] 日夜 · [M] 傳送 · [B/N] 音樂 · [H] 隱藏按鍵</div>
+
+  <!-- 觸控 / 滑鼠虛擬操控層 -->
+  <div id="controls-layer">
+    <!-- 左下角虛擬搖桿 -->
+    <div id="joystick-zone" aria-label="方向控制搖桿">
+      <div id="joystick-base">
+        <div id="joystick-knob"></div>
+      </div>
+    </div>
+
+    <!-- 右下角復古紅色 E 互動制 -->
+    <button id="action-btn" type="button" aria-label="E 互動按鈕">
+      <span class="btn-letter">E</span>
+      <span class="btn-sub">互動</span>
+    </button>
+  </div>
+
+  <!-- 16-bit 復古 RPG 對話框與網頁跳轉視窗 -->
+  <div id="rpg-dialog-overlay" role="dialog" aria-modal="true">
+    <div id="rpg-dialog-box" class="pixel-box">
+      <div class="dialog-header">
+        <div id="dialog-icon">🏛️</div>
+        <div>
+          <div id="dialog-title">地點名稱</div>
+          <div id="dialog-subtitle">維他利島導覽系統</div>
+        </div>
+      </div>
+      <div id="dialog-text">對話內容載入中...</div>
+      <div class="dialog-actions">
+        <a id="dialog-link-btn" class="rpg-btn rpg-btn-primary" href="#" target="_self" style="display: none;">
+          🚀 立即前往
+        </a>
+        <button id="dialog-close-btn" class="rpg-btn rpg-btn-secondary" type="button">
+          關閉 [E / ESC]
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 藍圖式「維他利島 傳送地圖 (TELEPORT MAP)」視窗 -->
+  <div id="teleport-modal" role="dialog" aria-modal="true">
+    <div class="blueprint-window">
+      <div class="blueprint-titlebar">
+        <h2>🗺️ HKGAMES.FUN - 維他利島迷你世界 (VICTARY ISLAND) 傳送藍圖</h2>
+        <button id="tp-close-btn" class="blueprint-close-x" type="button" aria-label="關閉傳送地圖">✕</button>
+      </div>
+      <div class="blueprint-body">
+        <div class="teleport-map-box">
+          <canvas id="teleport-canvas" width="420" height="336"></canvas>
+          <div class="teleport-map-hint">👆 可直接點擊藍圖上任何陸地位置，或選擇右側地標瞬間傳送！</div>
+        </div>
+        <div id="teleport-list" class="teleport-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       《維多利日報》復古報紙視窗
+       【站長修改指南】：以下 HTML 區塊專為方便修改網站公告、新聞與活動而設，
+       你可以直接修改標題、日期與段落文字，無需改動任何 JavaScript 程式碼！
+       ========================================================================== -->
+  <div id="newspaper-modal" role="dialog" aria-modal="true">
+    <div class="newspaper-sheet">
+      <div class="news-masthead">
+        <h1>維 多 利 日 報</h1>
+      </div>
+      <div class="news-meta">
+        <span>創刊號 · 維他利島發行</span>
+        <span>售價：免費派發（島民專享）</span>
+        <span>官方網站：hkgames.fun</span>
+      </div>
+
+      <div class="news-grid">
+        <!-- 左側頭條新聞區 -->
+        <div class="news-headline-box news-article">
+          <span class="news-tag">頭條快訊</span>
+          <h2>維他利島正式開島！四大遊戲分區全線通車</h2>
+          <p>
+            歡迎各位街坊同冒險者嚟到 <strong>hkgames.fun</strong> 嘅全新 16-bit 互動主大廳——<strong>維他利島 (Victary Island)</strong>！
+          </p>
+          <p>
+            依家大家可以自由喺島上散步探索：去西南面<strong>維多利碼頭</strong>搭渡輪去長洲搶包山；去西北面<strong>多利游泳池</strong>暢泳打水球；或者去東北面<strong>老虎山地鐵站</strong>挑戰轉車生存大作戰！
+          </p>
+          <p>
+            💡 <strong>快速移動貼士：</strong>點擊右上角迷你地圖或者按 <strong>[M]</strong> 鍵，就可以開啟<strong>維他利島藍圖</strong>瞬間傳送到各大地標！
+          </p>
+        </div>
+
+        <!-- 右側遊戲更新與活動欄 -->
+        <div class="news-article">
+          <div class="news-sidebar-item">
+            <span class="news-tag" style="background:#1c7ed6;">遊戲更新公告</span>
+            <h3>🚇 老虎山線班次加密</h3>
+            <p>《MTR 轉車生存戰》全新關卡已於老虎山地鐵站正式開放，歡迎各位挑戰極限轉車速度！</p>
+          </div>
+
+          <div class="news-sidebar-item">
+            <span class="news-tag" style="background:#2b8a3e;">島民活動資訊</span>
+            <h3>🎣 維多利碼頭釣魚大賽</h3>
+            <p>碼頭木棧道盡頭現已開放免費垂釣！聽聞有街坊釣到傳說中嘅「黃金魚蛋」同「神秘遊戲幣」，快啲去試下手氣！</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="news-close-bar">
+        <span style="font-size:13px; font-weight:700; color:#5c5042;">報紙檔老闆：「睇完記得去茶餐廳飲杯奶茶呀！」</span>
+        <button id="news-close-btn" class="rpg-btn rpg-btn-secondary" type="button">收起報紙 [E / ESC]</button>
+      </div>
+    </div>
+  </div>
+  <!-- ==================== 《維多利日報》內容編輯區結束 ==================== -->
+
+  <script>
+    /**
+     * ============================================================================
+     * 維他利島 (Victary Island) - 精緻 16-Bit 開放世界互動引擎
+     * 純 Vanilla JS + Canvas 2D 零外部素材架構
+     * ============================================================================
+     */
+
+    // ============================================================================
+    // 1. 16-BIT 復古音效合成器 (Web Audio API，免外部音訊檔)
+    // ============================================================================
+    const SoundFX = (() => {
+      let ctx = null;
+      let enabled = true;
+
+      function ensureCtx() {
+        if (!enabled) return null;
+        try {
+          if (!ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) ctx = new AudioCtx();
+          }
+          if (ctx && ctx.state === 'suspended') {
+            ctx.resume();
+          }
+        } catch (err) {
+          return null;
+        }
+        return ctx;
+      }
+
+      function playTone(freq, duration, type = 'square', gainVal = 0.05, delay = 0) {
+        const audio = ensureCtx();
+        if (!audio) return;
+        try {
+          const now = audio.currentTime + delay;
+          const osc = audio.createOscillator();
+          const gain = audio.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(gainVal, now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+          osc.connect(gain);
+          gain.connect(audio.destination);
+          osc.start(now);
+          osc.stop(now + duration);
+        } catch (err) {
+          // 忽略瀏覽器自動播放限制錯誤
+        }
+      }
+
+      return {
+        toggle() {
+          enabled = !enabled;
+          if (enabled) this.blip();
+          return enabled;
+        },
+        step() {
+          playTone(150 + Math.random() * 35, 0.045, 'triangle', 0.025);
+        },
+        blip() {
+          playTone(587.33, 0.07, 'square', 0.045, 0);
+          playTone(880, 0.1, 'square', 0.045, 0.06);
+        },
+        close() {
+          playTone(440, 0.07, 'square', 0.035, 0);
+          playTone(329.63, 0.09, 'square', 0.035, 0.05);
+        },
+        teleport() {
+          playTone(330, 0.08, 'sine', 0.06, 0);
+          playTone(493.88, 0.08, 'sine', 0.06, 0.06);
+          playTone(659.25, 0.1, 'sine', 0.06, 0.12);
+          playTone(987.77, 0.18, 'triangle', 0.06, 0.18);
+        },
+        iceCream() {
+          const notes = [523.25, 659.25, 783.99, 1046.5];
+          notes.forEach((n, idx) => playTone(n, 0.11, 'triangle', 0.06, idx * 0.08));
+        },
+        fishSplash() {
+          playTone(260, 0.09, 'sine', 0.06, 0);
+          playTone(523.25, 0.09, 'square', 0.05, 0.08);
+          playTone(783.99, 0.16, 'square', 0.05, 0.16);
+        }
+      };
+    })();
+
+    // ============================================================================
+    // 1.5 16-BIT 悠閒背景音樂歌單 (Chill 16-Bit Chiptune Playlist)
+    // ============================================================================
+    const ChillBGM = (() => {
+      let ctx = null;
+      let masterGain = null;
+      let isPlaying = false;
+      let enabled = true;
+      let trackIdx = 0;
+      let stepIdx = 0;
+      let timerId = null;
+
+      // MIDI 音高轉頻率
+      function midiToFreq(m) {
+        return 440 * Math.pow(2, (m - 69) / 12);
+      }
+
+      // 四首風格各異嘅 16-bit 悠閒曲目（32 步循環樂句）
+      const playlist = [
+        {
+          title: '01. 維多利海風 (Sea Breeze)',
+          tempo: 156, // 每步 ms (~96 BPM 八分音符)
+          leadWave: 'triangle',
+          bassWave: 'sine',
+          // 溫暖海風五聲音階旋律 (0 = 休止符)
+          lead: [
+            72, 0, 76, 79, 81, 0, 79, 76,
+            74, 0, 72, 69, 72, 0, 0, 0,
+            76, 0, 79, 84, 83, 0, 79, 76,
+            74, 0, 76, 74, 72, 0, 0, 0
+          ],
+          chord: [
+            60, 64, 67, 71, 60, 64, 67, 71,
+            57, 60, 64, 69, 57, 60, 64, 69,
+            53, 57, 60, 64, 53, 57, 60, 64,
+            55, 59, 62, 67, 55, 59, 62, 67
+          ],
+          bass: [
+            48, 0, 48, 0, 52, 0, 48, 0,
+            45, 0, 45, 0, 48, 0, 45, 0,
+            41, 0, 41, 0, 45, 0, 41, 0,
+            43, 0, 43, 0, 47, 0, 43, 0
+          ]
+        },
+        {
+          title: '02. 富豪雪糕車之夢 (Soft Serve)',
+          tempo: 168,
+          leadWave: 'sine',
+          bassWave: 'triangle',
+          // 懷舊雪糕車音樂盒風格變奏
+          lead: [
+            72, 76, 79, 84, 0, 84, 81, 79,
+            77, 74, 71, 77, 0, 76, 74, 72,
+            72, 76, 79, 84, 0, 86, 84, 81,
+            79, 76, 74, 71, 72, 0, 0, 0
+          ],
+          chord: [
+            64, 67, 72, 67, 64, 67, 72, 67,
+            62, 65, 71, 65, 62, 65, 71, 65,
+            60, 64, 69, 64, 60, 64, 69, 64,
+            62, 67, 71, 67, 60, 64, 67, 0
+          ],
+          bass: [
+            48, 0, 55, 0, 48, 0, 55, 0,
+            43, 0, 50, 0, 43, 0, 50, 0,
+            45, 0, 52, 0, 45, 0, 52, 0,
+            43, 0, 47, 0, 48, 0, 0, 0
+          ]
+        },
+        {
+          title: '03. 龍灣茶記午後 (Cha Chaan Teng)',
+          tempo: 175,
+          leadWave: 'triangle',
+          bassWave: 'sine',
+          // 慵懶爵士 Lo-Fi 16-bit 旋律
+          lead: [
+            74, 0, 78, 81, 85, 0, 81, 78,
+            76, 0, 74, 71, 74, 0, 0, 0,
+            71, 0, 74, 78, 81, 0, 79, 76,
+            74, 0, 73, 71, 69, 0, 0, 0
+          ],
+          chord: [
+            62, 66, 69, 73, 62, 66, 69, 73,
+            59, 62, 66, 69, 59, 62, 66, 69,
+            55, 59, 62, 66, 55, 59, 62, 66,
+            57, 61, 64, 67, 57, 61, 64, 67
+          ],
+          bass: [
+            50, 0, 0, 50, 54, 0, 57, 0,
+            47, 0, 0, 47, 50, 0, 54, 0,
+            43, 0, 0, 43, 47, 0, 50, 0,
+            45, 0, 0, 45, 49, 0, 52, 0
+          ]
+        },
+        {
+          title: '04. 維港夜星 (Harbour Starlight)',
+          tempo: 190,
+          leadWave: 'sine',
+          bassWave: 'sine',
+          // 寧靜星空搖籃曲
+          lead: [
+            76, 0, 79, 0, 83, 0, 81, 79,
+            76, 0, 72, 0, 74, 0, 0, 0,
+            72, 0, 76, 0, 79, 0, 77, 76,
+            74, 0, 71, 0, 72, 0, 0, 0
+          ],
+          chord: [
+            57, 60, 64, 67, 57, 60, 64, 67,
+            53, 57, 60, 64, 53, 57, 60, 64,
+            60, 64, 67, 71, 60, 64, 67, 71,
+            55, 59, 62, 67, 55, 59, 62, 67
+          ],
+          bass: [
+            45, 0, 52, 0, 45, 0, 52, 0,
+            41, 0, 48, 0, 41, 0, 48, 0,
+            48, 0, 55, 0, 48, 0, 55, 0,
+            43, 0, 50, 0, 48, 0, 0, 0
+          ]
+        }
+      ];
+
+      function ensureAudio() {
+        try {
+          if (!ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return null;
+            ctx = new AudioCtx();
+            masterGain = ctx.createGain();
+            masterGain.gain.setValueAtTime(0.16, ctx.currentTime);
+
+            // 加入低通濾波器令 16-bit 音色更圓潤柔和、耐聽唔刺耳
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1650, ctx.currentTime);
+            masterGain.connect(filter);
+            filter.connect(ctx.destination);
+          }
+          if (ctx.state === 'suspended') {
+            ctx.resume();
+          }
+          return ctx;
+        } catch (err) {
+          return null;
+        }
+      }
+
+      function playVoice(midi, dur, wave, vol) {
+        if (!midi || !ctx || !masterGain) return;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = wave;
+        osc.frequency.setValueAtTime(midiToFreq(midi), now);
+
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.linearRampToValueAtTime(vol, now + 0.018);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+        osc.connect(g);
+        g.connect(masterGain);
+        osc.start(now);
+        osc.stop(now + dur + 0.02);
+      }
+
+      function tick() {
+        if (!enabled || !isPlaying) return;
+        const audio = ensureAudio();
+        if (!audio || audio.state !== 'running') return;
+
+        const tr = playlist[trackIdx];
+        const i = stepIdx % 32;
+        const stepSec = tr.tempo / 1000;
+
+        playVoice(tr.lead[i], stepSec * 1.65, tr.leadWave, 0.22);
+        playVoice(tr.chord[i], stepSec * 0.9, 'triangle', 0.075);
+        playVoice(tr.bass[i], stepSec * 1.7, tr.bassWave, 0.24);
+
+        stepIdx = (stepIdx + 1) % 32;
+      }
+
+      function updateLabel() {
+        const el = document.getElementById('music-track-label');
+        const btn = document.getElementById('bgm-toggle-btn');
+        if (el) {
+          const prefix = enabled ? (isPlaying ? '♪ 播放中：' : '♪ 待命：') : '🔇 已暫停：';
+          el.textContent = `${prefix}${playlist[trackIdx].title}`;
+        }
+        if (btn) {
+          btn.textContent = enabled ? '🎵 音樂:開' : '🔇 音樂:關';
+        }
+      }
+
+      function startLoop() {
+        if (timerId) clearInterval(timerId);
+        const tr = playlist[trackIdx];
+        timerId = setInterval(tick, tr.tempo);
+      }
+
+      return {
+        unlockAndStart() {
+          if (!enabled) return;
+          const audio = ensureAudio();
+          if (audio && !isPlaying) {
+            isPlaying = true;
+            startLoop();
+            updateLabel();
+          }
+        },
+        toggle() {
+          enabled = !enabled;
+          if (enabled) {
+            ensureAudio();
+            isPlaying = true;
+            startLoop();
+          } else {
+            isPlaying = false;
+            if (timerId) clearInterval(timerId);
+          }
+          updateLabel();
+          return enabled;
+        },
+        nextTrack(dir = 1) {
+          trackIdx = (trackIdx + dir + playlist.length) % playlist.length;
+          stepIdx = 0;
+          if (enabled) {
+            ensureAudio();
+            isPlaying = true;
+            startLoop();
+          }
+          updateLabel();
+          return playlist[trackIdx].title;
+        },
+        getCurrentTitle() {
+          return playlist[trackIdx].title;
+        }
+      };
+    })();
+
+    // ============================================================================
+    // 2. 地圖常數與寫實 16-BIT 離屏像素圖磚生成器
+    // ============================================================================
+    const TILE_PX = 16;   // 原始像素網格解析度 (16x16)
+    const SCALE = 3;      // 放大倍率 (每個磚塊顯示為 48x48 螢幕像素)
+    const TILE_SIZE = TILE_PX * SCALE;
+
+    const MAP_W = 54;     // 地圖寬度 (磚塊數)
+    const MAP_H = 44;     // 地圖高度 (磚塊數)
+
+    const TILE = {
+      WATER: 0,
+      CLIFF: 1,       // 海堤石牆與礁石海岸線
+      GRASS: 2,
+      FLOWER: 3,
+      ROAD: 4,        // 柏油馬路
+      SIDEWALK: 5,    // 港式行人路方磚
+      PIER: 6,        // 維多利碼頭木棧道
+      POOL_DECK: 7,   // 泳池防滑瓷磚
+      POOL_WATER: 8,  // 泳池清澈池水
+      MOUNTAIN: 9,    // 老虎山山坡
+      TRACK: 10,      // 港鐵碎石雙軌
+      PARK_PATH: 11   // 維多利公園石板小徑
+    };
+
+    function createOffscreen(w, h) {
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const g = c.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      return { canvas: c, ctx: g };
+    }
+
+    function drawMatrix(ctx, matrix, palette, ox = 0, oy = 0, px = 1) {
+      for (let y = 0; y < matrix.length; y++) {
+        const row = matrix[y];
+        for (let x = 0; x < row.length; x++) {
+          const ch = row[x];
+          if (ch !== '.' && palette[ch]) {
+            ctx.fillStyle = palette[ch];
+            ctx.fillRect(ox + x * px, oy + y * px, px, px);
+          }
+        }
+      }
+    }
+
+    // 清晰描邊文字輔助函數
+    function drawOutlinedText(ctx, text, x, y, fillColor = '#ffffff', strokeColor = '#090d16', lineWidth = 4) {
+      ctx.save();
+      ctx.lineJoin = 'round';
+      ctx.miterLimit = 2;
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = lineWidth;
+      ctx.strokeText(text, x, y);
+      ctx.fillStyle = fillColor;
+      ctx.fillText(text, x, y);
+      ctx.restore();
+    }
+
+    const Sprites = (() => {
+      const tiles = {};
+
+      // --- 2.1 寫實多層次 16-bit 地面磚塊 ---
+      // 寫實草地 (細膩草叢明暗漸變)
+      {
+        const { canvas, ctx } = createOffscreen(16, 16);
+        ctx.fillStyle = '#3f9b4c';
+        ctx.fillRect(0, 0, 16, 16);
+        ctx.fillStyle = '#33823e';
+        ctx.fillRect(0, 4, 3, 2);
+        ctx.fillRect(8, 1, 4, 2);
+        ctx.fillRect(11, 11, 4, 2);
+        ctx.fillRect(2, 13, 3, 2);
+        ctx.fillStyle = '#52b35e';
+        ctx.fillRect(4, 2, 2, 2);
+        ctx.fillRect(12, 6, 2, 2);
+        ctx.fillRect(6, 9, 3, 2);
+        ctx.fillStyle = '#6ec979';
+        ctx.fillRect(5, 2, 1, 1);
+        ctx.fillRect(13, 6, 1, 1);
+        tiles[TILE.GRASS] = canvas;
+      }
+
+      // 公園花圃 (石砌花槽 + 層次花葉)
+      {
+        const { canvas, ctx } = createOffscreen(16, 16);
+        ctx.fillStyle = '#2d6a36';
+        ctx.fillRect(0, 0, 16, 16);
+        ctx.fillStyle = '#3d8c47';
+        ctx.fillRect(1, 1, 14, 14);
+        // 紅、金、粉、白花朵與花蕊
+        const blooms = [
+          [2, 2, '#e03131', '#ffd43b'],
+          [9, 3, '#fcc419', '#ffffff'],
+          [3, 9, '#f06595', '#fff3bf'],
+          [10, 10, '#ff6b6b', '#ffd43b'],
+          [6, 6, '#ffffff', '#fcc419']
+        ];
+        blooms.forEach(([bx, by, petal, core]) => {
+          ctx.fillStyle = petal;
+          ctx.fillRect(bx, by, 3, 3);
+          ctx.fillStyle = core;
+          ctx.fillRect(bx + 1, by + 1, 1, 1);
+        });
+        tiles[TILE.FLOWER] = canvas;
+      }
+
+      // 維多利港石砌海堤與防波石 (寫實花崗岩海堤 + 浪花)
+      {
+        const { canvas, ctx } = createOffscreen(16, 16);
+        ctx.fillStyle = '#74c0fc';
+        ctx.fillRect(0, 0, 16, 16);
+        ctx.fillStyle = '#d0ebff';
+        ctx.fillRect(0, 12, 16, 3);
+        // 花崗岩石塊護岸
+        ctx.fillStyle = '#6c757d';
+        ctx.fillRect(0, 0, 16, 12);
+        ctx.fillStyle = '#495057';
+        ctx.fillRect(0, 5, 16, 1);
+        ctx.fillRect(0, 10, 16, 2);
+        ctx.fillRect(7, 0, 1, 6);
+        ctx.fillRect(15, 5, 1, 6);
+        ctx.fillStyle = '#adb5bd';
+        ctx.fillRect(1, 1, 5, 3);
+        ctx.fillRect(9, 6, 5, 3);
+        // 青苔水線
+        ctx.fillStyle = '#2b8a3e';
+        ctx.fillRect(0, 9, 16, 1);
+        tiles[TILE.CLIFF] = canvas;
+      }
+
+      // 深海波紋 (3 幀細膩海浪反光)
+      tiles.waterFrames = [0, 1, 2].map(frame => {
+        const { canvas, ctx } = createOffscreen(16, 16);
+        ctx.fillStyle = '#155e96';
+        ctx.fillRect(0, 0, 16, 16);
+        ctx.fillStyle = '#1b72b5';
+        ctx.fillRect(0, (frame * 5) % 14, 16, 4);
+        ctx.fillStyle = '#4dabf7';
+        const s = frame * 4;
+        ctx.fillRect((1 + s) % 12, 3, 4, 1);
+        ctx.fillRect((7 + s) % 12, 10, 5, 1);
+        ctx.fillStyle = '#a5d8ff';
+        ctx.fillRect((2 + s) % 12, 3, 2, 1);
+        return canvas;
+      });
+
+      // 寫實柏油馬路 (細膩瀝青顆粒與微反光)
+      {
+        const { canvas, ctx } = createOffscreen(16, 16);
+        ctx.fillStyle = '#333b48';
+        ctx.fillRect(0, 0, 16, 16);
+        ctx.fillStyle = '#282f3a';
+        ctx.fillRect(1, 2, 2, 1);
+        ctx.fillRect(9, 6, 2, 1);
+        ctx.fillRect(4, 12, 2, 1);
+        ctx.fillRect(13, 14, 2, 1);
+        ctx.fillStyle = '#475263';
+        ctx.fillRect(6, 3, 1, 1);
+        ctx.fillRect(12, 9, 1, 1);
+        ctx.fillRect(2, 8, 1, 1);
+        tiles[TILE.ROAD] = canvas;
+      }
+
+      // 港式行人路地磚 (暖灰石磚 + 精緻磚縫陰影，參考香城街景地面)
+      {
+        const { canvas, ctx } = createOffscreen(16, 16);
+        ctx.fillStyle = '#a89f94';
+        ctx.fillRect(0, 0, 16, 16);
+        ctx.fillStyle = '#7c7368';
+        ctx.fillRect(0, 7, 16, 1);
+        ctx.fillRect(0, 15, 16, 1);
+        ctx.fillRect(7, 0, 1, 8);
+        ctx.fillRect(15, 8, 1, 8);
+        ctx.fillStyle = '#bfb6aa';
+        ctx.fillRect(1, 1, 5, 5);
+        ctx.fillRect(9, 9, 5, 5);
+        ctx.fillStyle = '#968d82';
+        ctx.fillRect(9, 1, 5, 5);
+        ctx.fillRect(1, 9, 5, 5);
+        tiles[TILE.SIDEWALK] = canvas;
+      }
+
+      // 維多利公園石板廣場磚
+      {
+        const { canvas, ctx } = createOffscreen(16, 16);
+        ctx.fillStyle = '#d6cfc2';
+        ctx.fillRect(0, 0, 16, 16);
+        ctx.fillStyle = '#9c9283';
+        ctx.fillRect(0, 7, 16, 1);
+        ctx.fillRect(0, 15, 16, 1);
+        ctx.fillRect(7, 0, 1, 8);
+        ctx.fillRect(15, 8, 1, 8);
+        ctx.fillStyle = '#e8e2d5';
+        ctx.fillRect(1, 1, 5, 5);
+        ctx.fillRect(9, 9, 5, 5);
+        tiles[TILE.PARK_PATH] = canvas;
+      }
+
+      // 維多利碼頭厚實木棧道 (木紋色差 + 鐵釘)
+      {
+        const { canvas, ctx } = createOffscreen(16, 16);
+        ctx.fillStyle = '#8c5832';
+        ctx.fillRect(0, 0, 16, 16);
+        ctx.fillStyle = '#4a2c16';
+        ctx.fillRect(0, 3, 16, 1);
+        ctx.fillRect(0, 7, 16, 1);
+        ctx.fillRect(0, 11, 16, 1);
+        ctx.fillRect(0, 15, 16, 1);
+        ctx.fillStyle = '#a86e44';
+        ctx.fillRect(0, 0, 16, 2);
+        ctx.fillRect(0, 8, 16, 2);
+        ctx.fillStyle = '#734424';
+        ctx.fillRect(0, 4, 16, 2);
+        ctx.fillStyle = '#2b1a0e';
+        ctx.fillRect(2, 1, 1, 1);
+        ctx.fillRect(13, 1, 1, 1);
+        ctx.fillRect(2, 9, 1, 1);
+        ctx.fillRect(13, 9, 1, 1);
+        tiles[TILE.PIER] = canvas;
+      }
+
+      // 多利游泳池池邊防滑白藍瓷磚
+      {
+        const { canvas, ctx } = createOffscreen(16, 16);
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(0, 0, 16, 16);
+        ctx.fillStyle = '#f1f5f9';
+        ctx.fillRect(1, 1, 6, 6);
+        ctx.fillRect(9, 1, 6, 6);
+        ctx.fillRect(1, 9, 6, 6);
+        ctx.fillRect(9, 9, 6, 6);
+        tiles[TILE.POOL_DECK] = canvas;
+      }
+
+      // 游泳池池水 (含池底格線與波光)
+      tiles.poolFrames = [0, 1].map(frame => {
+        const { canvas, ctx } = createOffscreen(16, 16);
+        ctx.fillStyle = '#0284c7';
+        ctx.fillRect(0, 0, 16, 16);
+        // 池底磁磚暗線
+        ctx.fillStyle = '#0369a1';
+        ctx.fillRect(0, 7, 16, 1);
+        ctx.fillRect(7, 0, 1, 16);
+        // 水面波光
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(2, 2 + frame * 3, 5, 2);
+        ctx.fillRect(9, 10 - frame * 3, 5, 2);
+        ctx.fillStyle = '#bae6fd';
+        ctx.fillRect(3, 2 + frame * 3, 2, 1);
+        return canvas;
+      });
+
+      // 老虎山層次山岩林木
+      {
+        const { canvas, ctx } = createOffscreen(16, 16);
+        ctx.fillStyle = '#246b35';
+        ctx.fillRect(0, 0, 16, 16);
+        ctx.fillStyle = '#194d26';
+        ctx.fillRect(0, 11, 16, 5);
+        ctx.fillStyle = '#368f49';
+        ctx.fillRect(2, 2, 6, 4);
+        ctx.fillRect(9, 5, 6, 4);
+        ctx.fillStyle = '#52b35e';
+        ctx.fillRect(3, 3, 3, 2);
+        tiles[TILE.MOUNTAIN] = canvas;
+      }
+
+      // 港鐵碎石道碴與雙軌鐵路
+      {
+        const { canvas, ctx } = createOffscreen(16, 16);
+        ctx.fillStyle = '#5c636a';
+        ctx.fillRect(0, 0, 16, 16);
+        ctx.fillStyle = '#41464b';
+        ctx.fillRect(2, 1, 2, 2);
+        ctx.fillRect(10, 13, 2, 2);
+        ctx.fillStyle = '#4e3629';
+        for (let x = 1; x < 16; x += 4) {
+          ctx.fillRect(x, 2, 2, 12);
+        }
+        ctx.fillStyle = '#e9ecef';
+        ctx.fillRect(0, 3, 16, 2);
+        ctx.fillRect(0, 11, 16, 2);
+        ctx.fillStyle = '#868e96';
+        ctx.fillRect(0, 5, 16, 1);
+        ctx.fillRect(0, 13, 16, 1);
+        tiles[TILE.TRACK] = canvas;
+      }
+
+      // --- 2.2 精緻 16-bit 角色精靈生成函數 ---
+      function buildHumanSprite(palette, dir, step) {
+        const { canvas, ctx } = createOffscreen(16, 16);
+        ctx.fillStyle = 'rgba(0,0,0,0.34)';
+        ctx.fillRect(4, 14, 8, 2);
+
+        const bob = step === 0 ? 0 : -1;
+        let leftLegY = 12, rightLegY = 12;
+        if (step === 1) { leftLegY = 11; rightLegY = 13; }
+        if (step === 2) { leftLegY = 13; rightLegY = 11; }
+
+        if (dir === 'up') {
+          ctx.fillStyle = '#111625';
+          ctx.fillRect(3, 6 + bob, 10, 7);
+          ctx.fillStyle = palette.bag;
+          ctx.fillRect(4, 7 + bob, 8, 5);
+          ctx.fillStyle = palette.bagDark;
+          ctx.fillRect(5, 9 + bob, 6, 1);
+        } else if (dir === 'left') {
+          ctx.fillStyle = '#111625';
+          ctx.fillRect(10, 6 + bob, 4, 7);
+          ctx.fillStyle = palette.bag;
+          ctx.fillRect(10, 7 + bob, 3, 5);
+        } else if (dir === 'right') {
+          ctx.fillStyle = '#111625';
+          ctx.fillRect(2, 6 + bob, 4, 7);
+          ctx.fillStyle = palette.bag;
+          ctx.fillRect(3, 7 + bob, 3, 5);
+        }
+
+        ctx.fillStyle = '#111625';
+        ctx.fillRect(4, 6 + bob, 8, 6);
+        ctx.fillStyle = palette.shirt;
+        ctx.fillRect(5, 7 + bob, 6, 5);
+
+        if (dir === 'down') {
+          ctx.fillStyle = palette.bag;
+          ctx.fillRect(5, 7 + bob, 1, 4);
+          ctx.fillRect(10, 7 + bob, 1, 4);
+        }
+
+        ctx.fillStyle = palette.pants;
+        ctx.fillRect(5, leftLegY, 2, 2);
+        ctx.fillRect(9, rightLegY, 2, 2);
+        ctx.fillStyle = palette.shoes;
+        ctx.fillRect(5, leftLegY + 1, 2, 1);
+        ctx.fillRect(9, rightLegY + 1, 2, 1);
+
+        ctx.fillStyle = '#111625';
+        ctx.fillRect(3, 1 + bob, 10, 6);
+        ctx.fillStyle = palette.skin;
+        ctx.fillRect(4, 2 + bob, 8, 5);
+
+        ctx.fillStyle = palette.hair;
+        ctx.fillRect(4, 1 + bob, 8, 2);
+        if (dir === 'up') {
+          ctx.fillRect(4, 2 + bob, 8, 5);
+        } else if (dir === 'left') {
+          ctx.fillRect(9, 2 + bob, 3, 4);
+        } else if (dir === 'right') {
+          ctx.fillRect(4, 2 + bob, 3, 4);
+        } else {
+          ctx.fillRect(4, 2 + bob, 1, 2);
+          ctx.fillRect(11, 2 + bob, 1, 2);
+        }
+
+        ctx.fillStyle = '#090d16';
+        if (dir === 'down') {
+          ctx.fillRect(6, 4 + bob, 1, 2);
+          ctx.fillRect(9, 4 + bob, 1, 2);
+        } else if (dir === 'left') {
+          ctx.fillRect(5, 4 + bob, 1, 2);
+        } else if (dir === 'right') {
+          ctx.fillRect(10, 4 + bob, 1, 2);
+        }
+
+        return canvas;
+      }
+
+      const playerPalette = {
+        hair: '#1e293b',
+        skin: '#ffddb3',
+        shirt: '#228be6',
+        pants: '#334155',
+        shoes: '#fa5252',
+        bag: '#e03131',
+        bagDark: '#9b1c1c'
+      };
+
+      const player = {};
+      ['down', 'up', 'left', 'right'].forEach(dir => {
+        player[dir] = [0, 1, 2].map(step => buildHumanSprite(playerPalette, dir, step));
+      });
+
+      // 為所有人類 NPC 生成完整 4 方向（上下左右）× 3 幀行路動畫，避免出現向後行情況
+      function buildNpc4Dir(palette) {
+        const set = {};
+        ['down', 'up', 'left', 'right'].forEach(dir => {
+          set[dir] = [0, 1, 2].map(s => buildHumanSprite(palette, dir, s));
+        });
+        return set;
+      }
+
+      // 橘貓 4 方向行路精靈（影子緊貼貓爪底部，絕不浮空）
+      function buildCat4Dir() {
+        const catPal = { O: '#f97316', D: '#c2410c', W: '#ffedd5', E: '#090d16' };
+        const leftFrames = [0, 1].map(step => {
+          const { canvas, ctx } = createOffscreen(16, 16);
+          const mat = [
+            '................',
+            '................',
+            '................',
+            '................',
+            '...O..O.........',
+            '...OOOO.........',
+            '..OEOOEO.....OO.',
+            '..OOWWOO....O..O',
+            '...OOOOOOO.O....',
+            '...OO.OOOOOO....',
+            '....OOOOOOO.....',
+            step === 0 ? '....O.O.O.O.....' : '...O..O..O.O....',
+            '................',
+            '................',
+            '................',
+            '................'
+          ];
+          // 影子緊貼第 11 行貓爪底部 (y=11..12)
+          ctx.fillStyle = 'rgba(0,0,0,0.32)';
+          ctx.fillRect(3, 11, 9, 2);
+          drawMatrix(ctx, mat, catPal);
+          return canvas;
+        });
+
+        const rightFrames = leftFrames.map(src => {
+          const { canvas, ctx } = createOffscreen(16, 16);
+          ctx.translate(16, 0);
+          ctx.scale(-1, 1);
+          ctx.drawImage(src, 0, 0);
+          return canvas;
+        });
+
+        const downFrames = [0, 1].map(step => {
+          const { canvas, ctx } = createOffscreen(16, 16);
+          const mat = [
+            '................',
+            '................',
+            '................',
+            '....O....O......',
+            '....OOOOOO......',
+            '...OEOOOOEO.....',
+            '...OOOWWOOO.....',
+            '....OOOOOO......',
+            '....OOWWOO......',
+            '....OOOOOO......',
+            step === 0 ? '....OO..OO......' : '...OO....OO.....',
+            '................',
+            '................',
+            '................',
+            '................',
+            '................'
+          ];
+          // 影子緊貼第 10 行貓爪底部 (y=10..11)
+          ctx.fillStyle = 'rgba(0,0,0,0.32)';
+          ctx.fillRect(4, 10, 8, 2);
+          drawMatrix(ctx, mat, catPal);
+          return canvas;
+        });
+
+        const upFrames = [0, 1].map(step => {
+          const { canvas, ctx } = createOffscreen(16, 16);
+          const mat = [
+            '................',
+            '................',
+            '................',
+            '....O....O......',
+            '....OOOOOO......',
+            '....OOOOOO......',
+            '....OOOOOO......',
+            '....OOOOOO..OO..',
+            '....OOOOOO.O..O.',
+            '....OOOOOOO.....',
+            step === 0 ? '....OO..OO......' : '...OO....OO.....',
+            '................',
+            '................',
+            '................',
+            '................',
+            '................'
+          ];
+          // 影子緊貼第 10 行貓爪底部 (y=10..11)
+          ctx.fillStyle = 'rgba(0,0,0,0.32)';
+          ctx.fillRect(4, 10, 8, 2);
+          drawMatrix(ctx, mat, catPal);
+          return canvas;
+        });
+
+        return { left: leftFrames, right: rightFrames, down: downFrames, up: upFrames };
+      }
+
+      const npcs = {
+        uncle: buildNpc4Dir({
+          hair: '#e2e8f0', skin: '#f1c27d', shirt: '#ffffff', pants: '#475569', shoes: '#1e293b', bag: '#94a3b8', bagDark: '#64748b'
+        }),
+        student: buildNpc4Dir({
+          hair: '#3b2f2f', skin: '#ffddb3', shirt: '#f8fafc', pants: '#1d4ed8', shoes: '#1e293b', bag: '#facc15', bagDark: '#ca8a04'
+        }),
+        auntie: buildNpc4Dir({
+          hair: '#475569', skin: '#f5cba7', shirt: '#db2777', pants: '#1e293b', shoes: '#7e22ce', bag: '#f97316', bagDark: '#c2410c'
+        }),
+        mtrStaff: buildNpc4Dir({
+          hair: '#1e293b', skin: '#ffddb3', shirt: '#facc15', pants: '#1e3a8a', shoes: '#090d16', bag: '#ef4444', bagDark: '#991b1b'
+        }),
+        officeMan: buildNpc4Dir({
+          hair: '#0f172a', skin: '#f1c27d', shirt: '#e0f2fe', pants: '#1e293b', shoes: '#090d16', bag: '#78350f', bagDark: '#451a03'
+        }),
+        officeLady: buildNpc4Dir({
+          hair: '#451a03', skin: '#ffddb3', shirt: '#f472b6', pants: '#334155', shoes: '#be185d', bag: '#fde047', bagDark: '#ca8a04'
+        }),
+        schoolBoy: buildNpc4Dir({
+          hair: '#1e293b', skin: '#ffddb3', shirt: '#ffffff', pants: '#334155', shoes: '#090d16', bag: '#16a34a', bagDark: '#14532d'
+        }),
+        cat: buildCat4Dir()
+      };
+
+      return { tiles, player, npcs };
+    })();
+
+    // ============================================================================
+    // 3. 寫實建築繪圖工具與世界配置 (參考《龍灣》寫實港式唐樓與街景)
+    // ============================================================================
+    const ArtHelper = {
+      // 繪製寫實港式唐樓立面細節（冷氣機、鐵窗花、外牆水管、晾衫竹、夜晚亮燈窗戶）
+      drawTongLauUpper(ctx, x, y, w, h, wallBase, wallShade, isNight, seed) {
+        // 牆身底色與風化陰影層
+        ctx.fillStyle = wallBase;
+        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = wallShade;
+        ctx.fillRect(x, y, 8, h);
+        ctx.fillRect(x + w - 8, y, 8, h);
+        // 樓層橫向石屎線腳
+        ctx.fillRect(x, y + Math.floor(h * 0.5), w, 4);
+
+        // 垂直外牆去水喉管
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(x + 10, y, 4, h);
+        ctx.fillRect(x + w - 14, y, 4, h);
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(x + 11, y, 1, h);
+
+        // 兩層住宅窗戶、鐵窗花、窗口式冷氣機與晾衫架
+        const rows = [y + 10, y + Math.floor(h * 0.54)];
+        rows.forEach((wy, rIdx) => {
+          for (let wx = x + 22; wx < x + w - 38; wx += 44) {
+            const lit = isNight && ((seed + rIdx + wx) % 3 !== 0);
+            // 窗框凹槽
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(wx - 2, wy - 2, 28, 26);
+            // 玻璃（夜晚暖黃色室內燈光，日間藍灰反光）
+            ctx.fillStyle = lit ? '#fde047' : '#334155';
+            ctx.fillRect(wx, wy, 24, 22);
+            if (lit) {
+              ctx.fillStyle = '#fef9c3';
+              ctx.fillRect(wx + 3, wy + 3, 18, 12);
+            } else {
+              ctx.fillStyle = '#64748b';
+              ctx.fillRect(wx + 2, wy + 2, 8, 18);
+            }
+            // 港式鐵窗花格線
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(wx + 11, wy, 2, 22);
+            ctx.fillRect(wx, wy + 10, 24, 2);
+
+            // 窗口式冷氣機（右下角）
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillRect(wx + 15, wy + 13, 13, 11);
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(wx + 15, wy + 13, 13, 11);
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(wx + 17, wy + 15, 9, 7);
+
+            // 晾衫竹與彩色衣物
+            if ((seed + wx) % 2 === 0) {
+              ctx.fillStyle = '#cbd5e1';
+              ctx.fillRect(wx - 4, wy + 24, 22, 2);
+              const clothColors = ['#ef4444', '#3b82f6', '#facc15', '#ffffff', '#22c55e'];
+              ctx.fillStyle = clothColors[(seed + rIdx) % clothColors.length];
+              ctx.fillRect(wx, wy + 26, 6, 8);
+              ctx.fillStyle = clothColors[(seed + rIdx + 2) % clothColors.length];
+              ctx.fillRect(wx + 8, wy + 26, 6, 7);
+            }
+          }
+        });
+      },
+
+      // 繪製波浪形生鏽鐵皮簷篷
+      drawCorrugatedAwning(ctx, x, y, w, h, mainColor, darkColor) {
+        ctx.fillStyle = mainColor;
+        ctx.fillRect(x, y, w, h);
+        for (let rx = x; rx < x + w; rx += 6) {
+          ctx.fillStyle = darkColor;
+          ctx.fillRect(rx, y, 2, h);
+          ctx.fillStyle = 'rgba(255,255,255,0.18)';
+          ctx.fillRect(rx + 2, y, 2, h - 2);
+        }
+        // 簷篷前緣鐵銹質感
+        ctx.fillStyle = '#7c2d12';
+        ctx.fillRect(x, y + h - 3, w, 3);
+      },
+
+      // 繪製寫實港式雙頭天星小輪 (Star Ferry)
+      drawRealisticFerry(ctx, px, py, pw, ph, time, isNight) {
+        const bob = Math.sin(time * 0.0035) * 2.5;
+        const fy = py + bob;
+        const cx = px + pw / 2;
+        const cy = fy + ph * 0.62;
+
+        // 海面船身倒影與水波紋
+        ctx.fillStyle = 'rgba(9, 25, 45, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 16, pw * 0.47, 22, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const waveExpand = (Math.sin(time * 0.004) + 1) * 4;
+        ctx.strokeStyle = 'rgba(224, 242, 254, 0.55)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 12, pw * 0.48 + waveExpand, 24 + waveExpand * 0.3, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 1. 船底紅色防污漆水線 + 深綠色雙頭船殼 (尖頭船首與船尾)
+        ctx.fillStyle = '#991b1b';
+        ctx.beginPath();
+        ctx.moveTo(px + 8, cy + 8);
+        ctx.lineTo(px + 42, cy + 24);
+        ctx.lineTo(px + pw - 42, cy + 24);
+        ctx.lineTo(px + pw - 8, cy + 8);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#14532d';
+        ctx.beginPath();
+        ctx.moveTo(px + 4, cy);
+        ctx.lineTo(px + 38, cy + 18);
+        ctx.lineTo(px + pw - 38, cy + 18);
+        ctx.lineTo(px + pw - 4, cy);
+        ctx.lineTo(px + pw - 34, cy - 14);
+        ctx.lineTo(px + 34, cy - 14);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#090d16';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // 白色船身水線飾條與黃銅圓形舷窗
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(px + 32, cy + 2, pw - 64, 4);
+        // 船身側面融入 hkgames.fun 航線字樣
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.42)';
+        ctx.font = '700 8px "Press Start 2P", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('hkgames.fun', cx, cy + 14);
+        for (let bx = px + 46; bx < px + pw - 52; bx += 22) {
+          ctx.fillStyle = isNight ? '#fef08a' : '#0f172a';
+          ctx.beginPath();
+          ctx.arc(bx, cy + 10, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#eab308';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        // 2. 下層客艙（木色甲板 + 白色立柱 + 暖黃燈光客艙）
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(px + 34, cy - 18, pw - 68, 6);
+        ctx.fillStyle = isNight ? '#fde047' : '#1e293b';
+        ctx.fillRect(px + 42, cy - 34, pw - 84, 16);
+        ctx.fillStyle = '#f8fafc';
+        for (let sx = px + 40; sx <= px + pw - 44; sx += 24) {
+          ctx.fillRect(sx, cy - 35, 5, 18);
+        }
+
+        // 3. 上層客艙與木質欄杆
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(px + 36, cy - 40, pw - 72, 6);
+        ctx.fillStyle = isNight ? '#fef08a' : '#334155';
+        ctx.fillRect(px + 48, cy - 56, pw - 96, 16);
+        ctx.fillStyle = '#f8fafc';
+        for (let sx = px + 46; sx <= px + pw - 50; sx += 22) {
+          ctx.fillRect(sx, cy - 57, 4, 18);
+        }
+        // 上層柚木圍欄
+        ctx.fillStyle = '#b45309';
+        ctx.fillRect(px + 38, cy - 44, pw - 76, 4);
+
+        // 4. 船頂甲板、駕駛室 (Wheelhouse) 與經典黃黑煙囪
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(px + 42, cy - 62, pw - 84, 6);
+        ctx.strokeStyle = '#090d16';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(px + 42, cy - 62, pw - 84, 6);
+
+        // 駕駛室
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(cx - 28, cy - 76, 56, 14);
+        ctx.strokeRect(cx - 28, cy - 76, 56, 14);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(cx - 22, cy - 73, 44, 6);
+
+        // 黃色煙囪與黑色頂環
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(cx - 10, cy - 94, 20, 18);
+        ctx.strokeRect(cx - 10, cy - 94, 20, 18);
+        ctx.fillStyle = '#090d16';
+        ctx.fillRect(cx - 10, cy - 94, 20, 5);
+
+        // 煙囪微煙動畫
+        const smokeOffset = (time * 0.02) % 16;
+        ctx.fillStyle = 'rgba(241, 245, 249, 0.55)';
+        ctx.beginPath();
+        ctx.arc(cx + smokeOffset * 0.5, cy - 98 - smokeOffset, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 船頭旗幟與綠白五角星徽號
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(px + pw - 16, cy - 22, 2, 22);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(px + pw - 14, cy - 22, 12, 8);
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(px + pw - 10, cy - 20, 4, 4);
+      },
+
+      // 繪製寫實港式木舢舨 / 漁船
+      drawRealisticSampan(ctx, x, y, color, time, isNight, flip = false) {
+        const bob = Math.sin(time * 0.005 + x) * 1.8;
+        const sy = y + bob;
+        ctx.save();
+        if (flip) {
+          ctx.translate(x + 32, 0);
+          ctx.scale(-1, 1);
+          x = 0;
+        }
+        // 水面波紋
+        ctx.fillStyle = 'rgba(224, 242, 254, 0.45)';
+        ctx.fillRect(x + 4, sy + 20, 56, 4);
+
+        // 尖翹木船身
+        ctx.fillStyle = '#78350f';
+        ctx.beginPath();
+        ctx.moveTo(x + 2, sy + 12);
+        ctx.lineTo(x + 14, sy + 21);
+        ctx.lineTo(x + 50, sy + 21);
+        ctx.lineTo(x + 62, sy + 10);
+        ctx.lineTo(x + 48, sy + 13);
+        ctx.lineTo(x + 14, sy + 13);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#090d16';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 船身彩帶
+        ctx.fillStyle = color;
+        ctx.fillRect(x + 12, sy + 14, 38, 3);
+
+        // 拱形船篷與暖黃小燈籠
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillRect(x + 20, sy + 3, 24, 10);
+        ctx.strokeRect(x + 20, sy + 3, 24, 10);
+        ctx.fillStyle = isNight ? '#fef08a' : '#334155';
+        ctx.fillRect(x + 24, sy + 6, 6, 5);
+        ctx.fillRect(x + 34, sy + 6, 6, 5);
+
+        if (isNight) {
+          ctx.fillStyle = '#fb923c';
+          ctx.fillRect(x + 56, sy + 6, 4, 5);
+        }
+        ctx.restore();
+      },
+
+      // 繪製真·16-bit 像素階梯古典噴水池 (Pixel-Stepped Tiered Granite Fountain)
+      drawRealisticFountain(ctx, px, py, pw, ph, time, isNight) {
+        const p = 3; // 3px 銳利像素顆粒
+        const cx = Math.floor((px + pw / 2) / p) * p;
+        const cy = Math.floor((py + ph * 0.62) / p) * p;
+
+        // 幫助函數：繪製像素階梯八角形/圓盤
+        function drawPixelDisc(centerX, centerY, rx, ry, fillColor, strokeColor) {
+          for (let dy = -ry; dy <= ry; dy += p) {
+            const normY = dy / ry;
+            const spanX = Math.floor((rx * Math.sqrt(Math.max(0, 1 - normY * normY))) / p) * p;
+            if (strokeColor) {
+              ctx.fillStyle = strokeColor;
+              ctx.fillRect(centerX - spanX - p, centerY + dy, (spanX + p) * 2, p);
+            }
+            ctx.fillStyle = fillColor;
+            ctx.fillRect(centerX - spanX, centerY + dy, spanX * 2, p);
+          }
+        }
+
+        // 1. 地面石砌陰影與花崗岩底座外牆
+        drawPixelDisc(cx, cy + 9, 78, 45, 'rgba(9, 13, 22, 0.35)', null);
+        drawPixelDisc(cx, cy + 6, 75, 42, '#64748b', '#0f172a');
+        // 底座立體雕花石壁紋理
+        ctx.fillStyle = '#475569';
+        for (let sx = cx - 60; sx <= cx + 54; sx += 18) {
+          ctx.fillRect(sx, cy + 12, 6, 24);
+        }
+
+        // 2. 池壁頂部淺灰花崗岩邊緣
+        drawPixelDisc(cx, cy - 3, 75, 39, '#cbd5e1', '#0f172a');
+        drawPixelDisc(cx, cy - 3, 69, 34, '#94a3b8', null);
+
+        // 3. 下層大水池清澈池水與像素水波紋
+        drawPixelDisc(cx, cy - 2, 63, 30, isNight ? '#0369a1' : '#0284c7', '#1e293b');
+        drawPixelDisc(cx, cy - 2, 54, 24, isNight ? '#0284c7' : '#38bdf8', null);
+
+        // 池水動態像素波光圈
+        const rippleShift = Math.floor((time * 0.015) % 12);
+        ctx.fillStyle = isNight ? '#fef08a' : '#e0f2fe';
+        ctx.fillRect(cx - 42 + rippleShift, cy - 9, 15, p);
+        ctx.fillRect(cx + 21 - rippleShift, cy + 6, 18, p);
+        ctx.fillRect(cx - 27, cy + 12 - Math.floor(rippleShift / 2), 12, p);
+
+        // 4. 中央雕刻石柱基座
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(cx - 18, cy - 27, 36, 27);
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(cx - 15, cy - 24, 30, 24);
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(cx - 9, cy - 24, 12, 24);
+
+        // 5. 中層古典石水盤 (Middle Bowl)
+        drawPixelDisc(cx, cy - 27, 36, 15, '#64748b', '#0f172a');
+        drawPixelDisc(cx, cy - 30, 36, 14, '#e2e8f0', '#0f172a');
+        drawPixelDisc(cx, cy - 30, 30, 10, '#38bdf8', null);
+
+        // 6. 中層水盤四周垂落嘅動態像素水簾 (Cascading Water Curtains)
+        const fallFrame = Math.floor(time / 110) % 4;
+        const streamOffsets = [-27, -15, -3, 9, 21];
+        streamOffsets.forEach((ox, idx) => {
+          const streamLen = 21 + ((idx + fallFrame) % 2) * 3;
+          ctx.fillStyle = isNight ? '#bae6fd' : '#e0f2fe';
+          ctx.fillRect(cx + ox, cy - 24, p, streamLen);
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillRect(cx + ox + p, cy - 21, p, streamLen - 3);
+          // 落水激起嘅白色像素水花
+          if ((fallFrame + idx) % 2 === 0) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(cx + ox - p, cy - 3, p * 3, p);
+          }
+        });
+
+        // 7. 頂層小石碗與噴水銅雕噴嘴
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(cx - 9, cy - 48, 18, 18);
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(cx - 6, cy - 45, 12, 15);
+        drawPixelDisc(cx, cy - 48, 18, 8, '#e2e8f0', '#0f172a');
+        drawPixelDisc(cx, cy - 49, 14, 5, '#7dd3fc', null);
+
+        // 8. 頂部衝天主水柱與左右拋物線噴泉水花 (Arcing Pixel Jets)
+        const jetTick = Math.floor(time / 90) % 4;
+        const jetTop = cy - 75 - (jetTick % 2) * 3;
+        // 主水柱
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(cx - 6, jetTop + 6, 12, (cy - 48) - (jetTop + 6));
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(cx - 3, jetTop, 6, (cy - 48) - jetTop);
+
+        // 左右拋物線水弧與飛濺水珠
+        const arcPoints = [
+          [-9, -69], [-15, -66], [-21, -60], [-24, -51], [-27, -39],
+          [6, -69], [12, -66], [18, -60], [21, -51], [24, -39]
+        ];
+        arcPoints.forEach(([ax, ay], i) => {
+          ctx.fillStyle = (i + jetTick) % 2 === 0 ? '#ffffff' : '#bae6fd';
+          ctx.fillRect(cx + ax, cy + ay, p, p * 2);
+        });
+
+        // 夜間噴泉池底射燈暖光點綴
+        if (isNight) {
+          ctx.fillStyle = 'rgba(254, 240, 138, 0.75)';
+          ctx.fillRect(cx - 33, cy - 3, p * 2, p);
+          ctx.fillRect(cx + 27, cy - 3, p * 2, p);
+          ctx.fillRect(cx - 3, cy - 33, p * 2, p);
+        }
+      },
+
+      // 繪製寫實多層次 16-bit 像素大榕樹 (含氣根與多色階像素葉簇)
+      drawPixelBanyanTree(ctx, px, py, pw, ph) {
+        const p = 3;
+        const cx = Math.floor((px + pw / 2) / p) * p;
+        const baseY = py + ph - 6;
+
+        // 樹蔭像素陰影
+        ctx.fillStyle = 'rgba(9, 13, 22, 0.32)';
+        ctx.fillRect(cx - 33, baseY - 6, 66, 12);
+        ctx.fillRect(cx - 24, baseY - 9, 48, 18);
+
+        // 粗壯樹幹與樹根
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(cx - 12, py + 42, 24, 42);
+        ctx.fillRect(cx - 18, baseY - 9, 36, 9);
+        ctx.fillStyle = '#5c3a21';
+        ctx.fillRect(cx - 9, py + 42, 18, 42);
+        ctx.fillRect(cx - 15, baseY - 6, 30, 6);
+        // 樹皮高光與紋理
+        ctx.fillStyle = '#854d27';
+        ctx.fillRect(cx - 6, py + 45, 6, 36);
+        ctx.fillStyle = '#3f2310';
+        ctx.fillRect(cx + 3, py + 48, 3, 30);
+
+        // 垂吊氣根 (Banyan Aerial Roots)
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(cx - 24, py + 48, p, 24);
+        ctx.fillRect(cx - 18, py + 51, p, 18);
+        ctx.fillRect(cx + 18, py + 48, p, 21);
+        ctx.fillRect(cx + 24, py + 51, p, 15);
+
+        // 像素階梯圓形樹冠層（4 層色階：黑邊 -> 深墨綠 -> 翠綠 -> 陽光嫩綠）
+        function drawPixelCanopy(ox, oy, rx, ry, color) {
+          for (let dy = -ry; dy <= ry; dy += p) {
+            const norm = dy / ry;
+            const span = Math.floor((rx * Math.sqrt(Math.max(0, 1 - norm * norm))) / p) * p;
+            ctx.fillStyle = color;
+            ctx.fillRect(ox - span, oy + dy, span * 2, p);
+          }
+        }
+
+        // 外輪廓深框
+        drawPixelCanopy(cx, py + 30, 39, 27, '#090d16');
+        drawPixelCanopy(cx - 18, py + 36, 24, 18, '#090d16');
+        drawPixelCanopy(cx + 18, py + 36, 24, 18, '#090d16');
+
+        // 深綠暗部層
+        drawPixelCanopy(cx, py + 30, 36, 24, '#14532d');
+        drawPixelCanopy(cx - 18, py + 36, 21, 15, '#14532d');
+        drawPixelCanopy(cx + 18, py + 36, 21, 15, '#14532d');
+
+        // 中層翠綠樹葉
+        drawPixelCanopy(cx, py + 26, 33, 21, '#16a34a');
+        drawPixelCanopy(cx - 15, py + 32, 18, 12, '#16a34a');
+        drawPixelCanopy(cx + 15, py + 32, 18, 12, '#16a34a');
+
+        // 頂部陽光高光葉簇
+        drawPixelCanopy(cx - 6, py + 19, 21, 12, '#22c55e');
+        drawPixelCanopy(cx - 9, py + 16, 12, 6, '#86efac');
+        drawPixelCanopy(cx + 12, py + 24, 9, 6, '#4ade80');
+      },
+
+      // 繪製高精細像素陣列街頭塗鴉藝術 (True Pixel-Matrix Street Graffiti)
+      drawPixelGraffiti(ctx, x, y, variant = 'mtr') {
+        const graffPal = {
+          K: '#090d16', // 黑框與3D立體投影
+          C: '#22d3ee', // 電光青
+          B: '#0284c7', // 深海藍陰影
+          M: '#f43f5e', // 螢光洋紅
+          P: '#be123c', // 深紅陰影
+          Y: '#facc15', // 亮金黃
+          O: '#ea580c', // 橙紅陰影
+          G: '#a3e635', // 螢光青檸綠
+          W: '#ffffff'  // 高光白點
+        };
+
+        if (variant === 'mtr') {
+          // 54x16 精緻 3D 像素塗鴉壁畫："HKG" 街頭泡泡字 + 皇冠閃電 + 噴漆滴落
+          const mtrMural = [
+            '..............YYY.....................................',
+            '.............YWWWY..............GGGG..................',
+            '............YWWWWWY............GWWGG..................',
+            '..KKKK..KKKK.KKKKK..KKKK..KKKK.GGGG..KKKKKK....KKK....',
+            '.KCCWWKKCCWWKMMWWKKMMWWKKYYWWWKGGG..KYYYYYYK..KMMMK...',
+            '.KCCWWKKCCWWKMMWWKMMWWKKYYWWWWKGG..KYYWWWWYYK.KMMMK...',
+            '.KCCBBCCBBWWKMMWWMMWWKKYYWWKKK....KYYWWKKKKK..KPPPK...',
+            '.KCCCCCCCCWWKMMMMMWWKKYYWWK.......KYYWWK.KKKK.........',
+            '.KCCBBCCBBWWKMMWWMMWWKKYYWWK..GGG.KYYWWKKYYYK..CCC....',
+            '.KCCWWKKCCWWKMMWWKMMWWKKYYWWWWKGG.KYYWWKKYYYK.CWWWC...',
+            '.KCCWWKKCCWWKMMWWKKMMWWKKYYYYYYK...KYYYYYYYK...CCC....',
+            '..KKKK..KKKK.KKKK..KKKK..KKKKKK.....KKKKKK............',
+            '...CC....MM...MM....YY.....YY........YY..YY...........',
+            '...CC.........MM...........YY........YY...............',
+            '..............MM......................................'
+          ];
+          drawMatrix(ctx, mtrMural, graffPal, x, y + 4, 2);
+        } else if (variant === 'mtr_small') {
+          // 12x21 直立街頭噴漆標籤與皇冠塗鴉
+          const smallTag = [
+            '....Y..Y....',
+            '...YYYYYY...',
+            '...YWWWWY...',
+            '..KKKKKKKK..',
+            '.KMMWWWWMMK.',
+            '.KMMWWWWMMK.',
+            '.KPPMMMMPPK.',
+            '..KKKKKKKK..',
+            '.KCCWWWWCCK.',
+            '.KCCWWWWCCK.',
+            '.KBBCCCCBBK.',
+            '..KKKKKKKK..',
+            '.KGGWWWWGGK.',
+            '.KGGWWWWGGK.',
+            '..KKKKKKKK..',
+            '...MM..CC...',
+            '...MM.......'
+          ];
+          drawMatrix(ctx, smallTag, graffPal, x, y, 2);
+        } else if (variant === 'pool') {
+          // 60x8 泳池外牆海浪與「SPLASH」彩繪塗鴉壁畫
+          const poolMural = [
+            '..KKKK..KKKKK..KKK....KKKK...KKKK..KKK..KKK...CCC.....YYY...',
+            '.KYYYYKKMMWWWK.KGGK..KCCWWK.KYYYYKKMMWK.KMMK.CWWWC...YWWWY..',
+            '.KYYKK.KMMWWWK.KGGK.KCCWWCCKKYYKK.KMMWKKKMMK..CCC..CC.YYY.CC',
+            '..KYYK.KMMMMK..KGGK.KCCWWCCK.KYYK.KMMMMMWMMK.....CCWWCCCCCWW',
+            '.KKYYK.KMMKK...KGGKKKCCWWCCKKKYYK.KMMWKKKMMK...CCBBBBBBBBBWW',
+            '.KYYYYKKMMK....KGGGGKCCKKCCKKYYYYKKMMWK.KMMK.CCBBBBBBBBBBBBB',
+            '..KKKK..KK......KKKK.KK..KK..KKKK..KKK..KKK..CCCCCCCCCCCCCCC'
+          ];
+          drawMatrix(ctx, poolMural, graffPal, x, y + 1, 2);
+        }
+      }
+    };
+
+    const World = (() => {
+      const ground = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(TILE.WATER));
+      const solid = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(true));
+
+      function fillRect(x1, y1, w, h, tileType, isWalkable = true) {
+        for (let y = y1; y < y1 + h; y++) {
+          for (let x = x1; x < x1 + w; x++) {
+            if (x >= 0 && x < MAP_W && y >= 0 && y < MAP_H) {
+              ground[y][x] = tileType;
+              solid[y][x] = !isWalkable;
+            }
+          }
+        }
+      }
+
+      // 1. 鋪設維他利島草地主體
+      fillRect(5, 5, 44, 34, TILE.GRASS, true);
+
+      // 2. 島嶼四周石砌海堤護岸
+      fillRect(5, 38, 44, 1, TILE.CLIFF, false);
+      fillRect(4, 6, 1, 32, TILE.CLIFF, false);
+      fillRect(49, 6, 1, 32, TILE.CLIFF, false);
+
+      // 挖出西南角維多利海港灣（讓天星小輪停泊於碼頭旁）
+      fillRect(4, 30, 12, 10, TILE.WATER, false);
+      fillRect(15, 30, 1, 8, TILE.CLIFF, false);
+
+      // 3. 東北面港鐵雙軌（已移除老虎山山脈）
+      fillRect(32, 7, 21, 1, TILE.TRACK, false);
+
+      // 4. 井然有序嘅港式道路與行人路系統（噴水池完全位於公園內部，絕不在路中心！）
+      // 行人路基底
+      fillRect(9, 11, 35, 21, TILE.SIDEWALK, true);
+      fillRect(35, 11, 9, 25, TILE.SIDEWALK, true);
+
+      // 主幹柏油馬路（圍繞維多利公園四周）
+      fillRect(10, 12, 33, 2, TILE.ROAD, true);  // 北大道 (市政大樓、游泳池及老虎山地鐵站門前)
+      fillRect(12, 29, 31, 2, TILE.ROAD, true);  // 南大道 (碼頭通往南區大街，富豪雪糕車停泊於此)
+      fillRect(10, 12, 2, 18, TILE.ROAD, true);  // 西海濱路
+      fillRect(18, 12, 2, 19, TILE.ROAD, true);  // 公園西路
+      fillRect(34, 12, 2, 19, TILE.ROAD, true);  // 公園東路
+      fillRect(41, 12, 2, 23, TILE.ROAD, true);  // 東商業大道
+      fillRect(34, 34, 9, 2, TILE.ROAD, true);   // 南部住宅橫街
+
+      // 南大道雪糕車旁行人等候區
+      fillRect(19, 31, 7, 1, TILE.SIDEWALK, true);
+
+      // 5. 中央「維多利公園」(x: 20..33, y: 14..28) —— 獨立綠化公園區塊（潔淨草坪與石板小徑）
+      fillRect(20, 14, 14, 15, TILE.GRASS, true);
+      // 公園內部十字石板步行道與中央噴水池廣場
+      fillRect(26, 14, 2, 15, TILE.PARK_PATH, true);
+      fillRect(20, 20, 14, 2, TILE.PARK_PATH, true);
+      fillRect(24, 18, 6, 6, TILE.PARK_PATH, true);
+      // 公園西北角報紙檔專用石板小廣場
+      fillRect(20, 14, 4, 3, TILE.PARK_PATH, true);
+
+      // 6. 西南面「維多利碼頭」木棧道伸入維多利港
+      fillRect(9, 30, 5, 7, TILE.PIER, true);
+
+      // 7. 西北面「多利游泳池」池邊與蔚藍泳池水
+      fillRect(6, 5, 12, 7, TILE.POOL_DECK, true);
+      fillRect(7, 6, 8, 5, TILE.POOL_WATER, false);
+
+      // 8. 精緻寫實 16-bit 建築物清單
+      const structures = [
+        {
+          id: 'cityhall',
+          name: '維多利市政大樓',
+          tx: 22, ty: 5, tw: 10, th: 6,
+          solidBox: { x: 22, y: 6, w: 10, h: 5 },
+          draw(ctx, px, py, pw, ph, time, isNight) {
+            ctx.fillStyle = 'rgba(0,0,0,0.32)';
+            ctx.fillRect(px + 2, py + ph - 6, pw - 4, 10);
+
+            // 花崗岩基座與古典米白石牆
+            ctx.fillStyle = '#e7dcc8';
+            ctx.fillRect(px + 8, py + 48, pw - 16, ph - 48);
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(px + 8, py + 48, pw - 16, ph - 48);
+
+            // 花崗岩底座與樓層橫向石屎線腳
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(px + 8, py + ph - 14, pw - 16, 14);
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillRect(px + 8, py + 148, pw - 16, 6);
+
+            // 石屎橫樑陰刻 hkgames.fun 字樣（融合石牆質感）
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.35)';
+            ctx.font = '900 10px "Press Start 2P", monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('HKGAMES.FUN', px + pw / 2, py + 145);
+
+            // 左右兩翼古典壁柱（Pilasters）
+            const pillarOffsets = [16, 162, pw - 174, pw - 28];
+            pillarOffsets.forEach(off => {
+              ctx.fillStyle = '#991b1b';
+              ctx.fillRect(px + off, py + 52, 12, ph - 66);
+              ctx.fillStyle = '#f8fafc';
+              ctx.fillRect(px + off + 3, py + 52, 3, ph - 66);
+            });
+
+            // 市政大樓左右兩翼雙層古典窗戶（共 12 扇窗，夜晚自動亮起暖光）
+            const winXList = [
+              px + 38, px + 80, px + 122,
+              px + pw - 148, px + pw - 106, px + pw - 64
+            ];
+            const winRows = [py + 88, py + 168];
+            winRows.forEach((wy, rIdx) => {
+              winXList.forEach((wx, cIdx) => {
+                const winW = 26;
+                const winH = 44;
+                // 石砌窗框外圍
+                ctx.fillStyle = '#cbd5e1';
+                ctx.fillRect(wx - 3, wy - 4, winW + 6, winH + 6);
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(wx - 3, wy - 4, winW + 6, winH + 6);
+
+                // 玻璃窗面（夜晚暖黃燈光 / 日間藍天反光）
+                const isLit = isNight && ((rIdx + cIdx) % 4 !== 3);
+                ctx.fillStyle = isLit ? '#fde047' : '#1e3a8a';
+                ctx.fillRect(wx, wy, winW, winH);
+                if (isLit) {
+                  ctx.fillStyle = '#fef9c3';
+                  ctx.fillRect(wx + 3, wy + 3, winW - 6, winH - 12);
+                } else {
+                  ctx.fillStyle = '#38bdf8';
+                  ctx.fillRect(wx + 2, wy + 2, 9, winH - 6);
+                }
+
+                // 白色古典十字窗欞
+                ctx.fillStyle = '#f8fafc';
+                ctx.fillRect(wx + 12, wy, 2, winH);
+                ctx.fillRect(wx, wy + 14, winW, 2);
+                ctx.fillRect(wx, wy + 28, winW, 2);
+
+                // 凸出花崗岩窗台
+                ctx.fillStyle = '#64748b';
+                ctx.fillRect(wx - 5, wy + winH + 2, winW + 10, 4);
+              });
+            });
+
+            // 銅綠瓦片屋頂
+            ctx.fillStyle = '#115e59';
+            ctx.fillRect(px + 2, py + 34, pw - 4, 16);
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(px + 2, py + 34, pw - 4, 16);
+            ctx.fillStyle = '#0f766e';
+            ctx.fillRect(px + 14, py + 26, pw - 28, 10);
+
+            // 中央大鐘樓
+            const cx = px + pw / 2 - 30;
+            ctx.fillStyle = '#e7dcc8';
+            ctx.fillRect(cx, py + 4, 60, 44);
+            ctx.strokeRect(cx, py + 4, 60, 44);
+            ctx.fillStyle = '#115e59';
+            ctx.fillRect(cx - 4, py, 68, 9);
+
+            // 發光時鐘錶面
+            ctx.fillStyle = isNight ? '#fef08a' : '#ffffff';
+            ctx.beginPath();
+            ctx.arc(cx + 30, py + 24, 14, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#090d16';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(cx + 29, py + 14, 2, 11);
+            ctx.fillRect(cx + 29, py + 23, 9, 2);
+
+            // 暖光大門
+            ctx.fillStyle = isNight ? '#fbbf24' : '#1e293b';
+            ctx.fillRect(px + pw / 2 - 22, py + ph - 36, 44, 36);
+          }
+        },
+        {
+          id: 'pool_house',
+          name: '多利游泳池更衣室與滑水梯',
+          tx: 15, ty: 5, tw: 3, th: 6,
+          solidBox: { x: 15, y: 6, w: 3, h: 5 },
+          draw(ctx, px, py, pw, ph, time, isNight) {
+            const poolX = 6 * TILE_SIZE;
+            const poolY = 5 * TILE_SIZE;
+            const poolW = 12 * TILE_SIZE;
+            const poolH = 7 * TILE_SIZE;
+
+            // 泳池藍色防滑圍欄
+            ctx.strokeStyle = '#0369a1';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(poolX + 3, poolY + 3, poolW - 6, poolH - 6);
+
+            // 游泳池臨街外牆（附街頭彩繪塗鴉）
+            const wallY = poolY + poolH - 20;
+            const leftWallW = 9 * TILE_SIZE - 8;
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillRect(poolX + 2, wallY, leftWallW, 20);
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(poolX + 2, wallY, leftWallW, 20);
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(poolX + 2, wallY, leftWallW, 4);
+
+            // 泳池外牆兩幅街頭彩繪塗鴉
+            ArtHelper.drawPixelGraffiti(ctx, poolX + 22, wallY + 4, 'pool');
+            ArtHelper.drawPixelGraffiti(ctx, poolX + 235, wallY + 4, 'pool');
+
+            // 泳道浮標線
+            const waterX = 7 * TILE_SIZE;
+            const waterY = 6 * TILE_SIZE;
+            const waterW = 8 * TILE_SIZE;
+            ctx.fillStyle = '#facc15';
+            for (let lx = waterX + 8; lx < waterX + waterW - 8; lx += 14) {
+              ctx.fillRect(lx, waterY + 2.5 * TILE_SIZE, 8, 4);
+            }
+
+            // 池邊救生圈與遮陽躺椅
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(poolX + 24, poolY + poolH - 32, 8, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 更衣室大樓
+            ctx.fillStyle = '#f1f5f9';
+            ctx.fillRect(px + 6, py + 24, pw - 12, ph - 24);
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(px + 6, py + 24, pw - 12, ph - 24);
+
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(px + 2, py + 10, pw - 4, 16);
+            ctx.strokeRect(px + 2, py + 10, pw - 4, 16);
+
+            // 更衣室外牆塗鴉與百葉門
+            ArtHelper.drawPixelGraffiti(ctx, px + 14, py + 168, 'pool');
+            ctx.fillStyle = isNight ? '#fde047' : '#0369a1';
+            ctx.fillRect(px + 18, py + ph - 40, 22, 40);
+            ctx.fillRect(px + 48, py + ph - 40, 22, 40);
+
+            // 鋼架支撐雙色滑水梯
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(px - 18, py + 54, 6, 24);
+            ctx.fillStyle = '#facc15';
+            ctx.fillRect(px - 36, py + 38, 44, 16);
+            ctx.strokeRect(px - 36, py + 38, 44, 16);
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(px - 48, py + 48, 22, 14);
+          }
+        },
+        {
+          id: 'mtr_station',
+          name: '老虎山地鐵站',
+          tx: 34, ty: 6, tw: 11, th: 5,
+          solidBox: { x: 34, y: 7, w: 11, h: 4 },
+          draw(ctx, px, py, pw, ph, time, isNight) {
+            // 1. 混凝土雙孔鐵路隧道口與紅綠信號燈
+            const tunX = px - 86;
+            const tunY = py + 24;
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(tunX, tunY, 76, 62);
+            ctx.strokeStyle = '#090d16';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(tunX, tunY, 76, 62);
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(tunX - 4, tunY - 6, 84, 10);
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(tunX + 12, tunY + 18, 52, 44);
+            // 隧道紅綠信號燈
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(tunX + 3, tunY + 18, 7, 16);
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(tunX + 5, tunY + 20, 3, 4);
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(tunX + 5, tunY + 27, 3, 4);
+
+            // 2. 月台玻璃幕門 (Platform Screen Doors) 與黃色安全線
+            ctx.fillStyle = 'rgba(186, 230, 253, 0.55)';
+            ctx.fillRect(px + 6, py + 44, pw - 12, 34);
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(px + 6, py + 44, pw - 12, 34);
+            for (let gx = px + 26; gx < px + pw - 20; gx += 32) {
+              ctx.fillStyle = '#dc2626';
+              ctx.fillRect(gx, py + 44, 4, 34);
+            }
+
+            // 3. 港鐵站體主建築（經典港式馬賽克紅白磚牆 + 玻璃天幕）
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(px + 6, py + 74, pw - 12, ph - 74);
+            ctx.strokeStyle = '#090d16';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(px + 6, py + 74, pw - 12, ph - 74);
+
+            // 港鐵經典紅色馬賽克瓷磚飾牆
+            ctx.fillStyle = '#b91c1c';
+            ctx.fillRect(px + 10, py + 82, pw - 20, 44);
+            ctx.fillStyle = '#dc2626';
+            for (let mx = px + 14; mx < px + pw - 20; mx += 12) {
+              ctx.fillRect(mx, py + 85, 8, 38);
+            }
+
+            // 玻璃鋼架波浪站頂天幕
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(px, py + 62, pw, 16);
+            ctx.fillStyle = '#38bdf8';
+            for (let sx = px + 8; sx < px + pw - 14; sx += 22) {
+              ctx.fillRect(sx, py + 65, 16, 10);
+            }
+
+            // 4. 港鐵紅底白線大標誌牌 + 站名大招牌 + LED 列車到站顯示屏
+            const signX = px + 42;
+            const signY = py + 106;
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(signX - 20, signY - 20, 40, 40);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(signX - 20, signY - 20, 40, 40);
+            ctx.beginPath();
+            ctx.arc(signX, signY - 7, 9, 0.2 * Math.PI, 0.8 * Math.PI);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(signX, signY + 7, 9, 1.2 * Math.PI, 1.8 * Math.PI);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(signX, signY - 12);
+            ctx.lineTo(signX, signY + 12);
+            ctx.stroke();
+
+            // 站名白底紅框大招牌
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(px + 74, py + 88, 178, 32);
+            ctx.strokeStyle = '#dc2626';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(px + 74, py + 88, 178, 32);
+            ctx.fillStyle = '#090d16';
+            ctx.font = '900 17px "Noto Sans TC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('老虎山地鐵站', px + 163, py + 110);
+
+            // 右側 LED 列車班次顯示屏
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(px + 264, py + 88, pw - 282, 32);
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(px + 264, py + 88, pw - 282, 32);
+            ctx.fillStyle = '#facc15';
+            ctx.font = '900 12px "Noto Sans TC", sans-serif';
+            ctx.fillText('往金鐘 1分鐘', px + 264 + (pw - 282) / 2, py + 108);
+
+            // 地鐵站外牆街頭塗鴉壁畫（左右外牆與右側立柱）
+            ArtHelper.drawPixelGraffiti(ctx, px + 56, py + 134, 'mtr');
+            ArtHelper.drawPixelGraffiti(ctx, px + pw - 178, py + 134, 'mtr');
+            ArtHelper.drawPixelGraffiti(ctx, px + pw - 38, py + 186, 'mtr_small');
+
+            // 5. 八達通出入閘機 (Octopus Ticket Gates) 與暖光大堂通道
+            ctx.fillStyle = isNight ? '#fef08a' : '#1e293b';
+            ctx.fillRect(px + 46, py + ph - 58, pw - 92, 58);
+
+            // 5 部銀紅色八達通閘機柱與綠色通行箭咀燈
+            for (let gx = px + 66; gx <= px + pw - 78; gx += 46) {
+              ctx.fillStyle = '#cbd5e1';
+              ctx.fillRect(gx, py + ph - 42, 12, 42);
+              ctx.strokeStyle = '#090d16';
+              ctx.lineWidth = 2;
+              ctx.strokeRect(gx, py + ph - 42, 12, 42);
+              // 八達通拍卡器藍綠燈
+              ctx.fillStyle = '#38bdf8';
+              ctx.fillRect(gx + 2, py + ph - 36, 8, 8);
+              ctx.fillStyle = '#22c55e';
+              ctx.fillRect(gx + 3, py + ph - 22, 6, 6);
+              // 紅色擋板
+              ctx.fillStyle = '#ef4444';
+              ctx.fillRect(gx + 12, py + ph - 28, 12, 14);
+            }
+
+            // 6. 站外「港鐵出口立柱燈箱」（已移除 A出口 字樣）
+            const totemX = px + 16;
+            const totemY = py + ph - 66;
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(totemX, totemY, 22, 66);
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(totemX + 2, totemY + 4, 18, 18);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(totemX + 10, totemY + 7, 2, 12);
+            ctx.fillRect(totemX + 6, totemY + 12, 10, 2);
+            ctx.fillStyle = '#facc15';
+            ctx.fillRect(totemX + 2, totemY + 26, 18, 14);
+          }
+        },
+        {
+          id: 'pier_terminal',
+          name: '維多利碼頭大樓',
+          tx: 8, ty: 26, tw: 7, th: 4,
+          solidBox: { x: 8, y: 27, w: 7, h: 3 },
+          draw(ctx, px, py, pw, ph, time, isNight) {
+            // 維多利碼頭經典綠白鐘樓建築
+            ctx.fillStyle = '#f1f5f9';
+            ctx.fillRect(px + 6, py + 32, pw - 12, ph - 32);
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(px + 6, py + 32, pw - 12, ph - 32);
+
+            ArtHelper.drawCorrugatedAwning(ctx, px + 2, py + 16, pw - 4, 18, '#0d9488', '#115e59');
+            ctx.strokeRect(px + 2, py + 16, pw - 4, 18);
+
+            // 碼頭拱門與暖光候船室
+            for (let x = px + 22; x < px + pw - 36; x += 48) {
+              ctx.fillStyle = isNight ? '#fef08a' : '#1e293b';
+              ctx.fillRect(x, py + ph - 34, 28, 34);
+              ctx.strokeStyle = '#0f766e';
+              ctx.lineWidth = 3;
+              ctx.strokeRect(x, py + ph - 34, 28, 34);
+            }
+
+            // 碼頭木椿防撞柱
+            const pierBaseY = 37 * TILE_SIZE;
+            for (let bx = 9.2 * TILE_SIZE; bx <= 13.8 * TILE_SIZE; bx += TILE_SIZE) {
+              ctx.fillStyle = '#451a03';
+              ctx.fillRect(bx - 5, pierBaseY - 8, 10, 14);
+              ctx.fillStyle = '#facc15';
+              ctx.fillRect(bx - 4, pierBaseY - 8, 8, 3);
+            }
+
+            // 金字招牌
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(px + 28, py + 38, pw - 56, 24);
+            ctx.strokeStyle = '#ffd43b';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(px + 28, py + 38, pw - 56, 24);
+            ctx.fillStyle = '#ffd43b';
+            ctx.font = '900 13px "Noto Sans TC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('維多利碼頭 · 往長洲', px + pw / 2, py + 55);
+          }
+        },
+        {
+          id: 'ferry',
+          name: '維多利渡輪（寫實天星小輪）',
+          tx: 3, ty: 31, tw: 6, th: 5,
+          solidBox: { x: 4, y: 31, w: 5, h: 5 },
+          draw(ctx, px, py, pw, ph, time, isNight) {
+            ArtHelper.drawRealisticFerry(ctx, px, py, pw, ph, time, isNight);
+            // 航線浮動標籤
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+            ctx.fillRect(px + pw / 2 - 54, py + ph - 14, 108, 20);
+            ctx.strokeStyle = '#ffd43b';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(px + pw / 2 - 54, py + ph - 14, 108, 20);
+            ctx.fillStyle = '#ffd43b';
+            ctx.font = '900 11px "Noto Sans TC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('⛴ 天星渡輪 · 往長洲', px + pw / 2, py + ph);
+          }
+        },
+        {
+          id: 'fountain',
+          name: '維多利公園中央噴泉',
+          tx: 25, ty: 19, tw: 4, th: 4,
+          solidBox: { x: 25, y: 19, w: 4, h: 4 },
+          draw(ctx, px, py, pw, ph, time, isNight) {
+            ArtHelper.drawRealisticFountain(ctx, px, py, pw, ph, time, isNight);
+          }
+        },
+        {
+          id: 'newsstand',
+          name: '維多利報紙檔',
+          tx: 20.4, ty: 14.0, tw: 2.6, th: 1.5,
+          solidBox: { x: 20, y: 14, w: 3, h: 1 },
+          draw(ctx, px, py, pw, ph, time, isNight) {
+            // 報紙檔底部石屎地台陰影
+            ctx.fillStyle = 'rgba(9, 13, 22, 0.35)';
+            ctx.fillRect(px + 2, py + ph - 2, pw - 4, 6);
+
+            // 懷舊綠色鐵皮報紙檔主體
+            ctx.fillStyle = '#14532d';
+            ctx.fillRect(px + 4, py + 12, pw - 8, ph - 12);
+            ctx.strokeStyle = '#090d16';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(px + 4, py + 12, pw - 8, ph - 12);
+
+            ArtHelper.drawCorrugatedAwning(ctx, px, py + 4, pw, 12, '#15803d', '#052e16');
+
+            // 七彩雜誌與報紙陳列架
+            const colors = ['#ef4444', '#facc15', '#3b82f6', '#ffffff', '#f97316'];
+            for (let i = 0; i < 5; i++) {
+              ctx.fillStyle = colors[i];
+              ctx.fillRect(px + 10 + i * 20, py + 34, 16, 22);
+              ctx.fillStyle = '#0f172a';
+              ctx.fillRect(px + 12 + i * 20, py + 38, 12, 3);
+            }
+
+            // 暖黃吊燈與木招牌
+            ctx.fillStyle = isNight ? '#fef08a' : '#fef9c3';
+            ctx.fillRect(px + 10, py + 16, pw - 20, 14);
+            ctx.fillStyle = '#090d16';
+            ctx.font = '900 11px "Noto Sans TC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('維多利報紙檔', px + pw / 2, py + 27);
+          }
+        },
+        {
+          id: 'icecream_truck',
+          name: '富豪雪糕車',
+          tx: 21, ty: 29.75, tw: 3, th: 1.5,
+          solidBox: { x: 21, y: 30, w: 3, h: 1 },
+          draw(ctx, px, py, pw, ph, time, isNight) {
+            // 停泊喺南大道大街上面嘅陰影
+            ctx.fillStyle = 'rgba(0,0,0,0.42)';
+            ctx.fillRect(px + 2, py + 48, pw - 4, 10);
+
+            // 經典白藍紅富豪雪糕車車身
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(px + 4, py + 12, pw - 8, 42);
+            ctx.strokeStyle = '#090d16';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(px + 4, py + 12, pw - 8, 42);
+
+            // 藍色下裙邊與紅色車頂條
+            ctx.fillStyle = '#1d4ed8';
+            ctx.fillRect(px + 5, py + 38, pw - 10, 15);
+            // 雪糕車藍色車身融入 hkgames.fun 標誌
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+            ctx.font = '700 8px "Press Start 2P", monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('hkgames.fun', px + pw / 2, py + 48);
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(px + 8, py + 7, pw - 16, 6);
+
+            // 駕駛室擋風玻璃（左側）
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(px + 10, py + 17, 22, 18);
+            ctx.strokeRect(px + 10, py + 17, 22, 18);
+
+            // 暖光軟雪糕售賣窗口（右側）
+            ctx.fillStyle = isNight ? '#fde047' : '#fef9c3';
+            ctx.fillRect(px + 40, py + 17, 56, 19);
+            ctx.strokeRect(px + 40, py + 17, 56, 19);
+            // 售賣員與軟雪糕筒圖示
+            ctx.fillStyle = '#f97316';
+            ctx.fillRect(px + 104, py + 24, 8, 12);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(px + 108, py + 20, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 車輪
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(px + 18, py + 52, 18, 12);
+            ctx.fillRect(px + pw - 36, py + 52, 18, 12);
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(px + 23, py + 55, 8, 6);
+            ctx.fillRect(px + pw - 31, py + 55, 8, 6);
+
+            // 車頭燈（夜晚亮燈）
+            if (isNight) {
+              ctx.fillStyle = '#fef08a';
+              ctx.fillRect(px, py + 40, 5, 7);
+            }
+
+            const noteY = Math.sin(time * 0.008) * 5;
+            drawOutlinedText(ctx, '♪ 富豪雪糕車 ♫', px + pw / 2, py + 2 + noteY, '#ffd43b', '#090d16', 4);
+          }
+        },
+        {
+          id: 'chachaanteng',
+          name: '龍灣·維多利茶餐廳唐樓',
+          tx: 36, ty: 17, tw: 5, th: 5,
+          solidBox: { x: 36, y: 18, w: 5, h: 4 },
+          draw(ctx, px, py, pw, ph, time, isNight) {
+            // 樓上寫實港式唐樓住宅（參考《龍灣》街景圖）
+            ArtHelper.drawTongLauUpper(ctx, px + 4, py + 6, pw - 8, ph - 82, '#c89d7c', '#9c7254', isNight, 11);
+            ctx.strokeStyle = '#090d16';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(px + 4, py + 6, pw - 8, ph - 6);
+
+            // 墨綠色波浪鐵皮簷篷
+            ArtHelper.drawCorrugatedAwning(ctx, px, py + ph - 84, pw, 16, '#115e59', '#042f2e');
+
+            // 墨綠金字大招牌「維多利茶餐廳」
+            ctx.fillStyle = '#064e3b';
+            ctx.fillRect(px + 12, py + ph - 104, pw - 24, 24);
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(px + 12, py + ph - 104, pw - 24, 24);
+            ctx.fillStyle = '#fef08a';
+            ctx.font = '900 14px "Noto Sans TC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('☕ 維多利茶餐廳', px + pw / 2, py + ph - 87);
+
+            // 地面暖光開放式茶餐廳店面（看得到卡位與水吧暖光）
+            ctx.fillStyle = isNight ? '#fbbf24' : '#d97706';
+            ctx.fillRect(px + 12, py + ph - 68, pw - 24, 68);
+            ctx.fillStyle = isNight ? '#fef9c3' : '#fde68a';
+            ctx.fillRect(px + 20, py + ph - 58, pw - 40, 48);
+            // 紅色卡位座椅與餐桌
+            ctx.fillStyle = '#b91c1c';
+            ctx.fillRect(px + 26, py + ph - 30, 18, 22);
+            ctx.fillRect(px + pw - 44, py + ph - 30, 18, 22);
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(px + 46, py + ph - 24, 24, 16);
+          }
+        }
+      ];
+
+      // 9. 寫實港式唐樓商店街（米線風雲、龍灣辦館、維多利郵政局及樓上住宅）
+      const tongLauConfigs = [
+        { tx: 36, ty: 12, tw: 5, th: 5, wall: '#b8a99a', shade: '#8c7e70', awning: '#991b1b', signBg: '#7f1d1d', shopName: '🍜 龍灣米線風雲', seed: 1 },
+        { tx: 36, ty: 23, tw: 5, th: 5, wall: '#d6a29c', shade: '#a6746e', awning: '#1e3a8a', signBg: '#1e293b', shopName: '🏮 龍灣士多辦館', seed: 2 },
+        { tx: 43, ty: 13, tw: 5, th: 5, wall: '#94a3b8', shade: '#64748b', awning: '#166534', signBg: '#064e3b', shopName: '📮 維多利郵政局', seed: 3 },
+        { tx: 43, ty: 19, tw: 5, th: 5, wall: '#d4b483', shade: '#a38558', awning: '#9a3412', signBg: '#431407', shopName: '📚 龍灣舊書報社', seed: 4 },
+        { tx: 43, ty: 25, tw: 5, th: 5, wall: '#a3b18a', shade: '#74825c', awning: '#0f766e', signBg: '#134e4a', shopName: '🏠 發達地產置業', seed: 5 },
+        { tx: 29, ty: 32, tw: 5, th: 5, wall: '#cbd5e1', shade: '#94a3b8', awning: '#b45309', signBg: '#451a03', shopName: '🥖 皇后餅店西餅', seed: 6 },
+        { tx: 35, ty: 32, tw: 5, th: 5, wall: '#e2b6a3', shade: '#b58976', awning: '#1d4ed8', signBg: '#1e3a8a', shopName: '💈 上海理髮廳', seed: 7 },
+        { tx: 43, ty: 31, tw: 5, th: 5, wall: '#b0a8b9', shade: '#827a8c', awning: '#be123c', signBg: '#4c0519', shopName: '🍲 廟街煲仔飯', seed: 8 }
+      ];
+
+      tongLauConfigs.forEach((b, idx) => {
+        structures.push({
+          id: `tonglau_${idx}`,
+          name: b.shopName,
+          tx: b.tx, ty: b.ty, tw: b.tw, th: b.th,
+          solidBox: { x: b.tx, y: b.ty + 1, w: b.tw, h: b.th - 1 },
+          draw(ctx, px, py, pw, ph, time, isNight) {
+            ArtHelper.drawTongLauUpper(ctx, px + 4, py + 4, pw - 8, ph - 68, b.wall, b.shade, isNight, b.seed * 7);
+            ctx.strokeStyle = '#090d16';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(px + 4, py + 4, pw - 8, ph - 4);
+
+            // 鐵皮簷篷
+            ArtHelper.drawCorrugatedAwning(ctx, px, py + ph - 72, pw, 14, b.awning, '#1e293b');
+
+            // 招牌
+            ctx.fillStyle = b.signBg;
+            ctx.fillRect(px + 12, py + ph - 92, pw - 24, 22);
+            ctx.strokeStyle = '#ffd43b';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(px + 12, py + ph - 92, pw - 24, 22);
+            ctx.fillStyle = '#fef08a';
+            ctx.font = '900 13px "Noto Sans TC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(b.shopName, px + pw / 2, py + ph - 76);
+
+            // 地舖暖光櫥窗與大門
+            ctx.fillStyle = isNight ? '#fde047' : '#334155';
+            ctx.fillRect(px + 12, py + ph - 58, pw - 24, 58);
+            ctx.fillStyle = isNight ? '#fef9c3' : '#94a3b8';
+            ctx.fillRect(px + 18, py + ph - 50, pw - 36, 40);
+            ctx.fillStyle = '#451a03';
+            ctx.fillRect(px + pw / 2 - 14, py + ph - 44, 28, 44);
+          }
+        });
+      });
+
+      // 10. 公園長椅、街燈、港式橙色垃圾桶與大樹
+      const parkBenches = [
+        [24, 17], [28, 17], [24, 24], [28, 24]
+      ];
+      parkBenches.forEach(([bx, by], i) => {
+        structures.push({
+          id: `bench_${i}`,
+          name: '公園木長椅',
+          tx: bx, ty: by, tw: 2, th: 1,
+          solidBox: { x: bx, y: by, w: 2, h: 1 },
+          draw(ctx, px, py, pw, ph) {
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(px + 12, py + 24, 6, 16);
+            ctx.fillRect(px + pw - 18, py + 24, 6, 16);
+            ctx.fillStyle = '#92400e';
+            ctx.fillRect(px + 8, py + 16, pw - 16, 14);
+            ctx.strokeStyle = '#090d16';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(px + 8, py + 16, pw - 16, 14);
+          }
+        });
+      });
+
+      const treeCoords = [
+        [20, 19], [32, 18], [20, 26], [32, 26],
+        [7, 15], [7, 22], [19, 6], [32, 6], [46, 9], [18, 34],
+        [36, 5], [42, 5]
+      ];
+
+      treeCoords.forEach(([tx, ty], i) => {
+        structures.push({
+          id: `tree_${i}`,
+          name: '大榕樹',
+          tx, ty, tw: 2, th: 2,
+          solidBox: { x: tx, y: ty + 1, w: 2, h: 1 },
+          draw(ctx, px, py, pw, ph) {
+            ArtHelper.drawPixelBanyanTree(ctx, px, py, pw, ph);
+          }
+        });
+      });
+
+      // 寫入建築碰撞箱
+      structures.forEach(s => {
+        if (s.solidBox) {
+          for (let y = s.solidBox.y; y < s.solidBox.y + s.solidBox.h; y++) {
+            for (let x = s.solidBox.x; x < s.solidBox.x + s.solidBox.w; x++) {
+              if (x >= 0 && x < MAP_W && y >= 0 && y < MAP_H) {
+                solid[y][x] = true;
+              }
+            }
+          }
+        }
+      });
+
+      // 11. 路邊街燈與港式橙色垃圾桶（夜間自動亮燈發光！）
+      const streetLamps = [
+        [13, 11.8], [20, 11.8], [33, 11.8], [40, 11.8],
+        [13, 28.8], [22, 28.8], [31, 28.8], [40, 28.8],
+        [35.8, 16], [35.8, 22], [35.8, 27],
+        [23.5, 18.5], [29.5, 18.5], [23.5, 23.5], [29.5, 23.5],
+        [9.2, 31], [13.8, 31], [9.2, 35], [13.8, 35]
+      ];
+
+      // 11.5 港式灰色行人路鐵欄杆 (HK Steel Pedestrian Railings，預留斑馬線與出入口缺口)
+      const pedestrianRailings = [
+        // 北大道南側行人路欄杆（公園北緣，預留 x=26..27 斑馬線入口）
+        { x1: 20.2, x2: 25.6, y: 14.05, horiz: true },
+        { x1: 28.4, x2: 33.8, y: 14.05, horiz: true },
+        // 南大道北側行人路欄杆（公園南緣，預留 x=26..27 斑馬線入口）
+        { x1: 20.2, x2: 25.6, y: 28.95, horiz: true },
+        { x1: 28.4, x2: 33.8, y: 28.95, horiz: true },
+        // 公園東路西側欄杆（預留 y=20..21 公園東入口）
+        { y1: 14.3, y2: 19.6, x: 33.95, horiz: false },
+        { y1: 22.4, y2: 28.7, x: 33.95, horiz: false },
+        // 龍灣唐樓商店街門前欄杆（預留各店舖門口空位）
+        { y1: 13.5, y2: 15.5, x: 36.05, horiz: false },
+        { y1: 18.5, y2: 20.2, x: 36.05, horiz: false },
+        { y1: 24.5, y2: 26.5, x: 36.05, horiz: false }
+      ];
+
+      // 12. 世界地標清晰招牌名牌
+      const worldLabels = [
+        { tx: 12, ty: 5.5, title: '多利游泳池', sub: 'Dolly Swimming Pool' },
+        { tx: 40.5, ty: 6.5, title: '老虎山地鐵站', sub: 'Tiger Hill Station' },
+        { tx: 27, ty: 15.2, title: '維多利公園', sub: 'Victoria Park' },
+        { tx: 11.5, ty: 26.2, title: '維多利碼頭 (去長洲)', sub: 'Victoria Pier' },
+        { tx: 42, ty: 28.0, title: '龍灣唐樓商店街', sub: 'Lung Wan Tong Lau' }
+      ];
+
+      // 12.5 融合地圖環境背景嘅 hkgames.fun 地面石刻／路標／海堤印記
+      const bgBrandMarks = [
+        { tx: 27.0, ty: 17.6, text: 'HKGAMES.FUN', color: 'rgba(120, 110, 96, 0.42)', size: 10 },
+        { tx: 27.0, ty: 23.6, text: 'HKGAMES.FUN', color: 'rgba(120, 110, 96, 0.42)', size: 10 },
+        { tx: 15.2, ty: 13.1, text: 'HKGAMES.FUN', color: 'rgba(248, 250, 252, 0.24)', size: 9 },
+        { tx: 31.2, ty: 30.1, text: 'HKGAMES.FUN', color: 'rgba(248, 250, 252, 0.24)', size: 9 },
+        { tx: 11.5, ty: 33.8, text: 'hkgames.fun', color: 'rgba(59, 32, 14, 0.42)', size: 9 },
+        { tx: 26.5, ty: 38.6, text: 'HKGAMES.FUN', color: 'rgba(226, 232, 240, 0.36)', size: 9 },
+        { tx: 39.2, ty: 22.6, text: 'hkgames.fun', color: 'rgba(255, 255, 255, 0.24)', size: 8 }
+      ];
+
+      // 13. 互動熱點與傳送地標清單（全部座標均位於可行走路面/棧道）
+      const hotspots = [
+        {
+          id: 'pier',
+          tx: 11.0, ty: 31.5, radius: 2.6,
+          spawnTx: 11.0, spawnTy: 31.5,
+          prompt: '按 [E] 搭天星渡輪去長洲',
+          icon: '⛴️',
+          title: '維多利碼頭（前往長洲分站）',
+          subtitle: 'hkgames.fun/bun-festival · 渡輪服務',
+          desc: '海風吹拂住維多利碼頭！綠白色雙頭天星渡輪已經泊好岸。\n\n是否立即乘搭渡輪前往長洲分站，挑戰《搶包山大作戰》？',
+          linkText: '⛴️ 乘搭渡輪前往長洲',
+          linkUrl: 'https://hkgames.fun/bun-festival'
+        },
+        {
+          id: 'fishing',
+          tx: 11.0, ty: 35.8, radius: 1.9,
+          spawnTx: 11.0, spawnTy: 35.8,
+          prompt: '按 [E] 碼頭釣魚',
+          icon: '🎣',
+          title: '維多利碼頭釣魚位',
+          subtitle: '島民休閒垂釣區',
+          type: 'fishing'
+        },
+        {
+          id: 'pool',
+          tx: 15.5, ty: 12.2, radius: 2.3,
+          spawnTx: 15.5, spawnTy: 12.2,
+          prompt: '按 [E] 進入多利游泳池',
+          icon: '🏊',
+          title: '多利游泳池 (Dolly Swimming Pool)',
+          subtitle: 'hkgames.fun/water-polo · 水上競技場',
+          desc: '多利游泳池今日水質清澈見底，滑水梯同水球賽場已經準備就緒！\n\n要唔要立即換衫落水，前往游泳池分站遊玩？',
+          linkText: '🏊 前往多利游泳池',
+          linkUrl: 'https://hkgames.fun/water-polo'
+        },
+        {
+          id: 'mtr',
+          tx: 39.5, ty: 11.6, radius: 2.6,
+          spawnTx: 39.5, spawnTy: 11.6,
+          prompt: '按 [E] 進入老虎山地鐵站',
+          icon: '🚇',
+          title: '老虎山地鐵站 (Tiger Hill Station)',
+          subtitle: 'hkgames.fun/mtr-transfer-survival · 港鐵轉車挑戰',
+          desc: '「請勿靠近車門，嘟嘟嘟嘟……」\n老虎山站月台人頭湧湧，趕返工嘅打工仔同學生哥正衝向轉車月台！\n\n是否立即入閘挑戰《MTR 轉車生存戰》？',
+          linkText: '🚇 入閘前往地鐵站',
+          linkUrl: 'https://hkgames.fun/mtr-transfer-survival'
+        },
+        {
+          id: 'cityhall',
+          tx: 26.5, ty: 11.5, radius: 2.4,
+          spawnTx: 26.5, spawnTy: 11.5,
+          prompt: '按 [E] 返回 hkgames.fun 主畫面',
+          icon: '🏛️',
+          title: '維多利市政大樓（主頁傳送門）',
+          subtitle: 'hkgames.fun · 維他利島行政中心',
+          desc: '你企喺維他利島最宏偉嘅古典鐘樓市政大樓正門。\n\n是否返回 hkgames.fun 主畫面？',
+          linkText: '🏠 返回 hkgames.fun 主畫面',
+          linkUrl: 'https://hkgames.fun'
+        },
+        {
+          id: 'newspaper',
+          tx: 21.8, ty: 15.6, radius: 2.1,
+          spawnTx: 21.8, spawnTy: 15.6,
+          prompt: '按 [E] 閱讀《維多利日報》',
+          icon: '📰',
+          title: '維多利報紙檔',
+          subtitle: '最新島上新聞與遊戲公告',
+          type: 'newspaper'
+        },
+        {
+          id: 'icecream',
+          tx: 22.5, ty: 31.1, radius: 2.4,
+          spawnTx: 22.5, spawnTy: 31.1,
+          prompt: '按 [E] 買富豪軟雪糕',
+          icon: '🍦',
+          title: '富豪雪糕車（南大道大街分站）',
+          subtitle: '維他利島流動甜品車',
+          type: 'icecream'
+        },
+        {
+          id: 'chachaanteng',
+          tx: 35.5, ty: 21.5, radius: 2.2,
+          spawnTx: 35.5, spawnTy: 21.5,
+          prompt: '按 [E] 入維多利茶餐廳',
+          icon: '🧋',
+          title: '龍灣·維多利茶餐廳',
+          subtitle: '地道港式風味能量站',
+          type: 'chachaanteng'
+        }
+      ];
+
+      return { ground, solid, structures, streetLamps, pedestrianRailings, worldLabels, bgBrandMarks, hotspots };
+    })();
+
+    // ============================================================================
+    // 4. 動態時間系統 (日夜交替) 與 島上動態實體
+    // ============================================================================
+    const WorldTime = {
+      // 以分鐘計算 (0 ~ 1440)，預設 15:45 下午，每 0.4 秒流逝 1 分鐘，亦可隨時一鍵切換
+      minutes: 15 * 60 + 45,
+      presets: [
+        { label: '🌅 晨曦', mins: 6 * 60 + 30 },
+        { label: '☀️ 日間', mins: 13 * 60 + 0 },
+        { label: '🌇 黃昏', mins: 18 * 60 + 15 },
+        { label: '🌙 夜晚', mins: 21 * 60 + 30 }
+      ],
+      presetIdx: 1,
+      update(dt) {
+        this.minutes = (this.minutes + dt * 2.5) % 1440;
+      },
+      cyclePreset() {
+        this.presetIdx = (this.presetIdx + 1) % this.presets.length;
+        this.minutes = this.presets[this.presetIdx].mins;
+        return this.presets[this.presetIdx].label;
+      },
+      getHour() {
+        return this.minutes / 60;
+      },
+      isNightOrDusk() {
+        const h = this.getHour();
+        return h >= 17.5 || h < 6.5;
+      },
+      getFormatted() {
+        const total = Math.floor(this.minutes);
+        const hh = String(Math.floor(total / 60)).padStart(2, '0');
+        const mm = String(total % 60).padStart(2, '0');
+        const h = this.getHour();
+        let period = '日間';
+        if (h >= 5.5 && h < 8.0) period = '晨曦';
+        else if (h >= 8.0 && h < 17.0) period = '日間';
+        else if (h >= 17.0 && h < 19.5) period = '黃昏';
+        else period = '夜晚';
+        return `${hh}:${mm} ${period}`;
+      },
+      // 計算當前環境光色罩（用於日夜平滑過渡）
+      getAmbientOverlay() {
+        const h = this.getHour();
+        if (h >= 8.0 && h < 16.5) {
+          return { color: 'rgba(255, 250, 235, 0.03)', darkness: 0 };
+        }
+        if (h >= 16.5 && h < 18.0) {
+          const t = (h - 16.5) / 1.5;
+          return { color: `rgba(255, 140, 50, ${0.24 * t})`, darkness: 0.15 * t };
+        }
+        if (h >= 18.0 && h < 19.5) {
+          const t = (h - 18.0) / 1.5;
+          return { color: `rgba(25, 35, 85, ${0.24 + 0.36 * t})`, darkness: 0.15 + 0.45 * t };
+        }
+        if (h >= 19.5 || h < 5.5) {
+          return { color: 'rgba(12, 22, 58, 0.62)', darkness: 0.62 };
+        }
+        // 05:30 - 08:00 晨曦破曉
+        const t = (h - 5.5) / 2.5;
+        return { color: `rgba(60, 75, 130, ${0.55 * (1 - t)})`, darkness: 0.55 * (1 - t) };
+      }
+    };
+
+    const player = {
+      x: 26.5 * TILE_SIZE,
+      y: 12.8 * TILE_SIZE,
+      dir: 'down',
+      stepFrame: 0,
+      stepTimer: 0,
+      baseSpeed: 215,
+      boostTimer: 0,
+      fishCount: 0,
+      teleportFlash: 0
+    };
+
+    const npcs = [
+      {
+        name: '晨運陳伯',
+        icon: '👴',
+        spriteKey: 'uncle',
+        dir: 'right',
+        x: 23.2 * TILE_SIZE,
+        y: 16.3 * TILE_SIZE,
+        // 沿公園無障礙石板環迴步道散步（完全避開噴泉、長椅同大樹）
+        waypoints: [[23.2, 16.3], [30.6, 16.3], [30.6, 25.8], [23.2, 25.8]],
+        wpIndex: 1,
+        speed: 55,
+        stepFrame: 0,
+        stepTimer: 0,
+        dialogues: [
+          '「後生仔早呀！公園個噴水池移返入公園正中央，行路安全好多！」',
+          '「到咗黃昏同夜晚，全島街燈同唐樓燈火著晒燈，夜景真係好靚！」'
+        ]
+      },
+      {
+        name: '學生妹阿晴',
+        icon: '🎒',
+        spriteKey: 'student',
+        dir: 'down',
+        x: 34.8 * TILE_SIZE,
+        y: 14.5 * TILE_SIZE,
+        // 沿公園東路行人道往返散步（完全避開唐樓建築群）
+        waypoints: [[34.8, 14.5], [34.8, 27.5]],
+        wpIndex: 1,
+        speed: 75,
+        stepFrame: 0,
+        stepTimer: 0,
+        dialogues: [
+          '「我啱啱喺老虎山地鐵站玩完轉車生存戰，差啲趕唔切尾班車！」',
+          '「按 [T] 鍵可以隨時切換日夜時間，睇下龍灣唐樓夜晚嘅燈光！」'
+        ]
+      },
+      {
+        name: '買餸芬姐',
+        icon: '🛍️',
+        spriteKey: 'auntie',
+        dir: 'right',
+        x: 15.0 * TILE_SIZE,
+        y: 28.4 * TILE_SIZE,
+        // 沿南大道北側行人道來回行街
+        waypoints: [[15.0, 28.4], [33.0, 28.4]],
+        wpIndex: 1,
+        speed: 62,
+        stepFrame: 0,
+        stepTimer: 0,
+        dialogues: [
+          '「富豪雪糕車泊咗喺南大道大街上面，叮叮咚咚聲好有氣氛！」',
+          '「天星渡輪就泊喺維多利碼頭旁邊，隨時可以搭船去長洲！」'
+        ]
+      },
+      {
+        name: '港鐵站務員阿明',
+        icon: '🦺',
+        spriteKey: 'mtrStaff',
+        dir: 'right',
+        x: 36.2 * TILE_SIZE,
+        y: 11.4 * TILE_SIZE,
+        // 喺老虎山地鐵站閘機外巡邏維持秩序
+        waypoints: [[36.2, 11.4], [43.5, 11.4]],
+        wpIndex: 1,
+        speed: 48,
+        stepFrame: 0,
+        stepTimer: 0,
+        dialogues: [
+          '「請勿衝門，請企喺黃線後面！下一班往金鐘列車 1 分鐘後到達！」',
+          '「想挑戰極限轉車？行埋閘機按 [E] 就可以進入《MTR 轉車生存戰》！」'
+        ]
+      },
+      {
+        name: '趕返工陳生',
+        icon: '💼',
+        spriteKey: 'officeMan',
+        dir: 'left',
+        x: 43.2 * TILE_SIZE,
+        y: 11.6 * TILE_SIZE,
+        waypoints: [[43.2, 11.6], [37.2, 11.6]],
+        wpIndex: 1,
+        speed: 112,
+        stepFrame: 0,
+        stepTimer: 0,
+        dialogues: [
+          '「仲有 30 秒就打卡遲到啦！讓一讓，我要衝入老虎山地鐵站轉車！」',
+          '「拎住個公事包喺月台跑百米，每日都係《MTR 轉車生存戰》！」'
+        ]
+      },
+      {
+        name: '白領小姐 Coco',
+        icon: '👜',
+        spriteKey: 'officeLady',
+        dir: 'right',
+        x: 35.2 * TILE_SIZE,
+        y: 11.7 * TILE_SIZE,
+        waypoints: [[35.2, 11.7], [41.5, 11.7]],
+        wpIndex: 1,
+        speed: 96,
+        stepFrame: 0,
+        stepTimer: 0,
+        dialogues: [
+          '「嘟！八達通餘額充足！好彩趕得切頭班車過海！」',
+          '「放工去龍灣唐樓街食碗米線再飲杯奶茶就最正！」'
+        ]
+      },
+      {
+        name: '中學生阿軒',
+        icon: '🎓',
+        spriteKey: 'schoolBoy',
+        dir: 'down',
+        x: 41.8 * TILE_SIZE,
+        y: 13.5 * TILE_SIZE,
+        // 沿東商業大道往返老虎山地鐵站與唐樓商店街
+        waypoints: [[41.8, 13.5], [41.8, 28.5]],
+        wpIndex: 1,
+        speed: 90,
+        stepFrame: 0,
+        stepTimer: 0,
+        dialogues: [
+          '「書包好重呀！好在老虎山地鐵站新裝修有冷氣又有玻璃幕門！」',
+          '「老虎山地鐵站同游泳池出面多咗好多 16-bit 街頭塗鴉，好型呀！」'
+        ]
+      },
+      {
+        name: '橘貓「波子」',
+        icon: '🐈',
+        spriteKey: 'cat',
+        dir: 'right',
+        x: 24.5 * TILE_SIZE,
+        y: 15.8 * TILE_SIZE,
+        // 喺報紙檔旁邊石板廣場同噴水池北側空地悠閒散步
+        waypoints: [[24.5, 15.8], [29.5, 15.8], [29.5, 16.5], [24.5, 16.5]],
+        wpIndex: 1,
+        speed: 44,
+        stepFrame: 0,
+        stepTimer: 0,
+        dialogues: [
+          '「喵嗚～（波子懶洋洋咁伸咗個懶腰，用頭蹭你隻腳！）」',
+          '「呼嚕呼嚕……（波子好似想帶你去維多利碼頭睇人釣魚！）」'
+        ]
+      }
+    ];
+
+    const swimmers = [
+      { x: 8.5 * TILE_SIZE, y: 7.5 * TILE_SIZE, vx: 38, minX: 7.5 * TILE_SIZE, maxX: 13.8 * TILE_SIZE, color: '#f43f5e' },
+      { x: 12.2 * TILE_SIZE, y: 9.8 * TILE_SIZE, vx: -32, minX: 7.5 * TILE_SIZE, maxX: 13.8 * TILE_SIZE, color: '#facc15' },
+      { x: 9.8 * TILE_SIZE, y: 8.6 * TILE_SIZE, vx: 26, minX: 7.5 * TILE_SIZE, maxX: 13.8 * TILE_SIZE, color: '#34d399' }
+    ];
+
+    const train = {
+      x: 54 * TILE_SIZE,
+      y: 6.8 * TILE_SIZE,
+      speed: 240,
+      waitTimer: 2
+    };
+
+    const cars = [
+      { x: 12 * TILE_SIZE, y: 12.1 * TILE_SIZE, vx: 95, minX: 11 * TILE_SIZE, maxX: 41 * TILE_SIZE, color: '#ef4444' },
+      { x: 39 * TILE_SIZE, y: 28.95 * TILE_SIZE, vx: -85, minX: 13 * TILE_SIZE, maxX: 41 * TILE_SIZE, color: '#dc2626', isTaxi: true }
+    ];
+
+    const boats = [
+      { x: 1.5 * TILE_SIZE, y: 21 * TILE_SIZE, vy: 20, minY: 14 * TILE_SIZE, maxY: 27 * TILE_SIZE, color: '#ea580c', flip: false },
+      { x: 20 * TILE_SIZE, y: 40.2 * TILE_SIZE, vx: 28, minX: 17 * TILE_SIZE, maxX: 44 * TILE_SIZE, color: '#0284c7', flip: true }
+    ];
+
+    // ============================================================================
+    // 5. 遊戲狀態、鍵盤、虛擬搖桿與 TELEPORT 傳送系統
+    // ============================================================================
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const minimapCanvas = document.getElementById('minimap-canvas');
+    const minimapCtx = minimapCanvas.getContext('2d');
+    const teleportCanvas = document.getElementById('teleport-canvas');
+    const teleportCtx = teleportCanvas.getContext('2d');
+
+    const camera = { x: 0, y: 0 };
+    let viewW = window.innerWidth;
+    let viewH = window.innerHeight;
+
+    function resizeCanvas() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      viewW = window.innerWidth;
+      viewH = window.innerHeight;
+      canvas.width = Math.floor(viewW * dpr);
+      canvas.height = Math.floor(viewH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // 初始化鍵盤方向、虛擬搖桿向量、視窗狀態與互動目標變數
+    const keys = { up: false, down: false, left: false, right: false };
+    const joyVec = { active: false, x: 0, y: 0 };
+    let isModalOpen = false;
+    let activeTarget = null;
+    let stepSoundCooldown = 0;
+
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const el = document.createElement('div');
+      el.className = 'pixel-toast';
+      el.textContent = msg;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.25s ease';
+        setTimeout(() => el.remove(), 260);
+      }, 2600);
+    }
+
+    // 取得各個 UI 視窗與按鈕元素
+    const rpgOverlay = document.getElementById('rpg-dialog-overlay');
+    const dialogIcon = document.getElementById('dialog-icon');
+    const dialogTitle = document.getElementById('dialog-title');
+    const dialogSubtitle = document.getElementById('dialog-subtitle');
+    const dialogText = document.getElementById('dialog-text');
+    const dialogLinkBtn = document.getElementById('dialog-link-btn');
+    const dialogCloseBtn = document.getElementById('dialog-close-btn');
+
+    const newsModal = document.getElementById('newspaper-modal');
+    const newsCloseBtn = document.getElementById('news-close-btn');
+
+    const tpModal = document.getElementById('teleport-modal');
+    const tpCloseBtn = document.getElementById('tp-close-btn');
+    const tpList = document.getElementById('teleport-list');
+
+    const actionBtn = document.getElementById('action-btn');
+    const speedPill = document.getElementById('speed-pill');
+    const speedTimerEl = document.getElementById('speed-timer');
+    const fishPill = document.getElementById('fish-pill');
+    const fishCountEl = document.getElementById('fish-count');
+    const clockDisplay = document.getElementById('clock-display');
+
+    function syncModalState() {
+      isModalOpen =
+        rpgOverlay.classList.contains('open') ||
+        newsModal.classList.contains('open') ||
+        tpModal.classList.contains('open');
+      if (isModalOpen) {
+        keys.up = keys.down = keys.left = keys.right = false;
+        joyVec.active = false;
+        joyVec.x = 0;
+        joyVec.y = 0;
+      }
+    }
+
+    function openDialog({ icon, title, subtitle, text, linkText, linkUrl }) {
+      dialogIcon.textContent = icon || '🏛️';
+      dialogTitle.textContent = title || '維他利島導覽';
+      dialogSubtitle.textContent = subtitle || 'hkgames.fun 互動大廳';
+      dialogText.textContent = text || '';
+
+      if (linkUrl) {
+        dialogLinkBtn.href = linkUrl;
+        dialogLinkBtn.textContent = linkText || '🚀 立即前往';
+        dialogLinkBtn.style.display = 'inline-flex';
+      } else {
+        dialogLinkBtn.style.display = 'none';
+      }
+
+      rpgOverlay.classList.add('open');
+      syncModalState();
+      SoundFX.blip();
+    }
+
+    function closeAllModals() {
+      const wasOpen = isModalOpen;
+      rpgOverlay.classList.remove('open');
+      newsModal.classList.remove('open');
+      tpModal.classList.remove('open');
+      syncModalState();
+      if (wasOpen) SoundFX.close();
+    }
+
+    // ============================================================================
+    // 6. 地圖瞬間傳送系統 (TELEPORT BLUEPRINT)
+    // ============================================================================
+    function findNearestWalkableTile(tx, ty) {
+      const cx = Math.max(5, Math.min(MAP_W - 6, Math.round(tx)));
+      const cy = Math.max(5, Math.min(MAP_H - 6, Math.round(ty)));
+      if (!World.solid[cy][cx]) return { x: cx + 0.5, y: cy + 0.5 };
+
+      for (let r = 1; r <= 8; r++) {
+        for (let dy = -r; dy <= r; dy++) {
+          for (let dx = -r; dx <= r; dx++) {
+            const nx = cx + dx;
+            const ny = cy + dy;
+            if (nx >= 5 && nx < MAP_W - 5 && ny >= 5 && ny < MAP_H - 5) {
+              if (!World.solid[ny][nx]) {
+                return { x: nx + 0.5, y: ny + 0.5 };
+              }
+            }
+          }
+        }
+      }
+      return { x: 26.5, y: 12.8 };
+    }
+
+    function teleportToTile(tx, ty, placeLabel) {
+      const safe = findNearestWalkableTile(tx, ty);
+      player.x = safe.x * TILE_SIZE;
+      player.y = safe.y * TILE_SIZE;
+      player.dir = 'down';
+      player.teleportFlash = 1.0;
+      closeAllModals();
+      SoundFX.teleport();
+      showToast(`✨ 已瞬間傳送至：${placeLabel}`);
+    }
+
+    function drawTeleportBlueprint() {
+      const w = teleportCanvas.width;
+      const h = teleportCanvas.height;
+      const cw = w / MAP_W;
+      const ch = h / MAP_H;
+
+      teleportCtx.clearRect(0, 0, w, h);
+
+      // 繪製藍圖地形與建築色塊
+      for (let y = 0; y < MAP_H; y++) {
+        for (let x = 0; x < MAP_W; x++) {
+          const t = World.ground[y][x];
+          if (t === TILE.WATER) teleportCtx.fillStyle = '#13568c';
+          else if (t === TILE.CLIFF) teleportCtx.fillStyle = '#94a3b8';
+          else if (t === TILE.ROAD) teleportCtx.fillStyle = '#334155';
+          else if (t === TILE.SIDEWALK || t === TILE.PARK_PATH) teleportCtx.fillStyle = '#cbd5e1';
+          else if (t === TILE.PIER) teleportCtx.fillStyle = '#b45309';
+          else if (t === TILE.POOL_WATER) teleportCtx.fillStyle = '#38bdf8';
+          else if (t === TILE.POOL_DECK) teleportCtx.fillStyle = '#f8fafc';
+          else if (t === TILE.MOUNTAIN) teleportCtx.fillStyle = '#166534';
+          else if (t === TILE.TRACK) teleportCtx.fillStyle = '#64748b';
+          else if (t === TILE.FLOWER) teleportCtx.fillStyle = '#f43f5e';
+          else teleportCtx.fillStyle = '#22c55e';
+
+          teleportCtx.fillRect(x * cw, y * ch, Math.ceil(cw), Math.ceil(ch));
+        }
+      }
+
+      // 藍圖網格線
+      teleportCtx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+      teleportCtx.lineWidth = 1;
+      for (let gx = 0; gx <= w; gx += 28) {
+        teleportCtx.beginPath();
+        teleportCtx.moveTo(gx, 0);
+        teleportCtx.lineTo(gx, h);
+        teleportCtx.stroke();
+      }
+      for (let gy = 0; gy <= h; gy += 28) {
+        teleportCtx.beginPath();
+        teleportCtx.moveTo(0, gy);
+        teleportCtx.lineTo(w, gy);
+        teleportCtx.stroke();
+      }
+
+      // 建築物方塊
+      World.structures.forEach(s => {
+        if (s.id.startsWith('tree_') || s.id.startsWith('bench_')) return;
+        teleportCtx.fillStyle = s.id === 'ferry' ? '#15803d' : '#f8fafc';
+        teleportCtx.fillRect(s.tx * cw, s.ty * ch, s.tw * cw, s.th * ch);
+        teleportCtx.strokeStyle = '#090d16';
+        teleportCtx.lineWidth = 1;
+        teleportCtx.strokeRect(s.tx * cw, s.ty * ch, s.tw * cw, s.th * ch);
+      });
+
+      // 地標閃爍圓點
+      World.hotspots.forEach(spot => {
+        const sx = spot.spawnTx * cw;
+        const sy = spot.spawnTy * ch;
+        teleportCtx.fillStyle = '#ffd43b';
+        teleportCtx.beginPath();
+        teleportCtx.arc(sx, sy, 4.5, 0, Math.PI * 2);
+        teleportCtx.fill();
+        teleportCtx.strokeStyle = '#090d16';
+        teleportCtx.lineWidth = 1.5;
+        teleportCtx.stroke();
+      });
+
+      // 玩家當前位置標記
+      const px = (player.x / TILE_SIZE) * cw;
+      const py = (player.y / TILE_SIZE) * ch;
+      teleportCtx.fillStyle = '#ef4444';
+      teleportCtx.beginPath();
+      teleportCtx.arc(px, py, 5.5, 0, Math.PI * 2);
+      teleportCtx.fill();
+      teleportCtx.strokeStyle = '#ffffff';
+      teleportCtx.lineWidth = 2;
+      teleportCtx.stroke();
+    }
+
+    function openTeleportModal() {
+      tpList.innerHTML = '';
+      World.hotspots.forEach(spot => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tp-spot-btn';
+        btn.innerHTML = `
+          <span class="tp-spot-info">
+            <span class="tp-spot-icon">${spot.icon}</span>
+            <span>
+              <span class="tp-spot-name">${spot.title}</span>
+              <span class="tp-spot-desc">${spot.subtitle}</span>
+            </span>
+          </span>
+          <span class="tp-go-badge">傳送 GO</span>
+        `;
+        btn.addEventListener('click', () => {
+          teleportToTile(spot.spawnTx, spot.spawnTy, spot.title);
+        });
+        tpList.appendChild(btn);
+      });
+
+      tpModal.classList.add('open');
+      syncModalState();
+      drawTeleportBlueprint();
+      SoundFX.blip();
+    }
+
+    teleportCanvas.addEventListener('click', (e) => {
+      const rect = teleportCanvas.getBoundingClientRect();
+      const relX = (e.clientX - rect.left) / rect.width;
+      const relY = (e.clientY - rect.top) / rect.height;
+      const targetTx = relX * MAP_W;
+      const targetTy = relY * MAP_H;
+      teleportToTile(targetTx, targetTy, '藍圖指定位置');
+    });
+
+    // ============================================================================
+    // 7. 彩蛋與建築互動邏輯
+    // ============================================================================
+    const hkQuotes = [
+      '「飲杯絲襪奶茶叉叉電先啦，陣間仲要去老虎山趕車！」',
+      '「新鮮出爐菠蘿油配凍檸茶，少甜少冰，人生一大樂事！」',
+      '「做人最緊要開心，喺維他利島慢慢行下吹下海風啦！」',
+      '「夥計！一份常餐沙爹牛麵加炒蛋多士，唔該！」',
+      '「記住按 [M] 或者撳右上角地圖，隨時可以瞬移去唔同景點！」'
+    ];
+
+    const fishingLoots = [
+      { name: '✨ 傳說級「黃金魚蛋」', desc: '閃閃發光嘅彈牙咖哩黃金魚蛋，據說食完好運一整日！' },
+      { name: '🪙 神秘 16-Bit 遊戲幣', desc: '印有 hkgames.fun 標誌嘅復古街機代幣！' },
+      { name: '👟 濕漉漉嘅舊波鞋', desc: '唔知邊個唔小心跌落維多利港嘅左腳波鞋……' },
+      { name: '🧧 長洲平安包鎖匙扣', desc: '從長洲隨海浪漂過嚟嘅紀念品，上面寫住「平安」二字！' },
+      { name: '💳 生鏽嘅初代八達通', desc: '嘟一聲！入面好似仲有幾毫子餘額！' }
+    ];
+
+    function triggerIceCream() {
+      player.boostTimer = 15;
+      speedPill.classList.add('active');
+      speedTimerEl.textContent = '15';
+      SoundFX.iceCream();
+      openDialog({
+        icon: '🍦',
+        title: '富豪雪糕車 · 香滑軟雪糕',
+        subtitle: '獲得 15 秒移動速度提升 (Speed Boost)！',
+        text: '雪糕車伯伯遞咗一支香濃幼滑嘅雲呢拿軟雪糕畀你！\n\n「食完雪糕腳步都輕快啲呀！」\n你的移動速度已大幅提升 15 秒！'
+      });
+    }
+
+    function triggerChaChaanteng() {
+      const quote = hkQuotes[Math.floor(Math.random() * hkQuotes.length)];
+      openDialog({
+        icon: '🧋',
+        title: '龍灣·維多利茶餐廳',
+        subtitle: '地道港式風味金句',
+        text: `茶餐廳老闆熱情招呼你：\n\n${quote}`
+      });
+    }
+
+    function triggerFishing() {
+      player.fishCount += 1;
+      fishPill.classList.add('active');
+      fishCountEl.textContent = String(player.fishCount);
+      SoundFX.fishSplash();
+      const loot = fishingLoots[Math.floor(Math.random() * fishingLoots.length)];
+      openDialog({
+        icon: '🎣',
+        title: `釣魚成功！獲得：${loot.name}`,
+        subtitle: `累計釣獲寶物：${player.fishCount} 件`,
+        text: `你喺維多利碼頭木棧道甩竿垂釣，魚絲突然猛烈拉扯！\n\n釣上嚟嘅係：【${loot.name}】\n${loot.desc}`
+      });
+    }
+
+    function handleInteract() {
+      if (isModalOpen) {
+        closeAllModals();
+        return;
+      }
+      if (!activeTarget) {
+        showToast('💡 行近建築物門口、渡輪、雪糕車或街坊再按 [E] 互動！');
+        return;
+      }
+
+      if (activeTarget.kind === 'npc') {
+        const npc = activeTarget.data;
+        const line = npc.dialogues[Math.floor(Math.random() * npc.dialogues.length)];
+        openDialog({
+          icon: npc.icon,
+          title: npc.name,
+          subtitle: '維他利島街坊對話',
+          text: line
+        });
+        return;
+      }
+
+      const spot = activeTarget.data;
+      if (spot.type === 'newspaper') {
+        newsModal.classList.add('open');
+        syncModalState();
+        SoundFX.blip();
+      } else if (spot.type === 'icecream') {
+        triggerIceCream();
+      } else if (spot.type === 'chachaanteng') {
+        triggerChaChaanteng();
+      } else if (spot.type === 'fishing') {
+        triggerFishing();
+      } else {
+        openDialog({
+          icon: spot.icon,
+          title: spot.title,
+          subtitle: spot.subtitle,
+          text: spot.desc,
+          linkText: spot.linkText,
+          linkUrl: spot.linkUrl
+        });
+      }
+    }
+
+    // ============================================================================
+    // 8. 鍵盤、虛擬搖桿與按鈕事件綁定
+    // ============================================================================
+    const controlsLayer = document.getElementById('controls-layer');
+    const controlsToggleBtn = document.getElementById('controls-toggle-btn');
+    let showVirtualControls = true;
+
+    function toggleVirtualControls() {
+      showVirtualControls = !showVirtualControls;
+      controlsLayer.classList.toggle('hidden', !showVirtualControls);
+      controlsToggleBtn.textContent = showVirtualControls ? '🎮 虛擬制:開' : '🎮 虛擬制:關';
+      if (!showVirtualControls) {
+        resetJoystick();
+      }
+      SoundFX.blip();
+      showToast(showVirtualControls ? '🎮 已顯示虛擬搖桿與互動制' : '🙈 已隱藏虛擬搖桿與互動制（可按 [H] 恢復）');
+    }
+
+    // 首次點擊或按鍵自動解鎖並播放 16-bit 悠閒背景音樂
+    window.addEventListener('pointerdown', () => ChillBGM.unlockAndStart(), { once: true });
+
+    window.addEventListener('keydown', (e) => {
+      ChillBGM.unlockAndStart();
+      const code = e.code;
+      if (code === 'Escape') {
+        if (isModalOpen) closeAllModals();
+        return;
+      }
+      if (code === 'KeyE' || code === 'Space' || code === 'Enter') {
+        e.preventDefault();
+        actionBtn.classList.add('pressed');
+        handleInteract();
+        return;
+      }
+      if (code === 'KeyM') {
+        if (tpModal.classList.contains('open')) closeAllModals();
+        else {
+          closeAllModals();
+          openTeleportModal();
+        }
+        return;
+      }
+      if (code === 'KeyT') {
+        const label = WorldTime.cyclePreset();
+        showToast(`🕒 時間已切換為：${label}`);
+        SoundFX.blip();
+        return;
+      }
+      if (code === 'KeyH') {
+        toggleVirtualControls();
+        return;
+      }
+      if (code === 'KeyB') {
+        const on = ChillBGM.toggle();
+        showToast(on ? `🎵 開始播放：${ChillBGM.getCurrentTitle()}` : '🔇 已暫停 16-bit 背景音樂');
+        return;
+      }
+      if (code === 'KeyN') {
+        const title = ChillBGM.nextTrack(1);
+        showToast(`⏭ 切換歌曲：${title}`);
+        return;
+      }
+
+      if (isModalOpen) return;
+      if (code === 'KeyW' || code === 'ArrowUp') keys.up = true;
+      if (code === 'KeyS' || code === 'ArrowDown') keys.down = true;
+      if (code === 'KeyA' || code === 'ArrowLeft') keys.left = true;
+      if (code === 'KeyD' || code === 'ArrowRight') keys.right = true;
+    });
+
+    window.addEventListener('keyup', (e) => {
+      const code = e.code;
+      if (code === 'KeyE' || code === 'Space' || code === 'Enter') {
+        actionBtn.classList.remove('pressed');
+      }
+      if (code === 'KeyW' || code === 'ArrowUp') keys.up = false;
+      if (code === 'KeyS' || code === 'ArrowDown') keys.down = false;
+      if (code === 'KeyA' || code === 'ArrowLeft') keys.left = false;
+      if (code === 'KeyD' || code === 'ArrowRight') keys.right = false;
+    });
+
+    // 左下角虛擬搖桿控制（支援滑鼠拖曳與手機觸控）
+    const joyZone = document.getElementById('joystick-zone');
+    const joyKnob = document.getElementById('joystick-knob');
+    let joyPointerId = null;
+
+    function updateJoystickFromClient(clientX, clientY) {
+      const rect = joyZone.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const maxDist = 36;
+      let dx = clientX - cx;
+      let dy = clientY - cy;
+      const dist = Math.hypot(dx, dy);
+      if (dist > maxDist) {
+        dx = (dx / dist) * maxDist;
+        dy = (dy / dist) * maxDist;
+      }
+      joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+      joyVec.active = dist > 6;
+      joyVec.x = dist > 6 ? dx / maxDist : 0;
+      joyVec.y = dist > 6 ? dy / maxDist : 0;
+    }
+
+    function resetJoystick() {
+      joyPointerId = null;
+      joyVec.active = false;
+      joyVec.x = 0;
+      joyVec.y = 0;
+      joyKnob.style.transform = 'translate(0px, 0px)';
+    }
+
+    joyZone.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (isModalOpen) return;
+      joyPointerId = e.pointerId;
+      joyZone.setPointerCapture(e.pointerId);
+      updateJoystickFromClient(e.clientX, e.clientY);
+    });
+
+    joyZone.addEventListener('pointermove', (e) => {
+      if (e.pointerId === joyPointerId) {
+        updateJoystickFromClient(e.clientX, e.clientY);
+      }
+    });
+
+    joyZone.addEventListener('pointerup', (e) => {
+      if (e.pointerId === joyPointerId) resetJoystick();
+    });
+    joyZone.addEventListener('pointercancel', (e) => {
+      if (e.pointerId === joyPointerId) resetJoystick();
+    });
+
+    // 右下角 E 互動按鈕
+    actionBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleInteract();
+    });
+
+    // HUD 與彈窗按鈕監聽
+    document.getElementById('time-toggle-btn').addEventListener('click', () => {
+      const label = WorldTime.cyclePreset();
+      showToast(`🕒 時間已切換為：${label}`);
+      SoundFX.blip();
+    });
+
+    document.getElementById('open-tp-btn').addEventListener('click', () => {
+      closeAllModals();
+      openTeleportModal();
+    });
+
+    document.getElementById('minimap-wrapper').addEventListener('click', () => {
+      closeAllModals();
+      openTeleportModal();
+    });
+
+    document.getElementById('sound-toggle-btn').addEventListener('click', (e) => {
+      const on = SoundFX.toggle();
+      e.currentTarget.textContent = on ? '🔊 音效:開' : '🔇 音效:關';
+    });
+
+    controlsToggleBtn.addEventListener('click', toggleVirtualControls);
+
+    document.getElementById('bgm-toggle-btn').addEventListener('click', () => {
+      const on = ChillBGM.toggle();
+      showToast(on ? `🎵 開始播放：${ChillBGM.getCurrentTitle()}` : '🔇 已暫停 16-bit 背景音樂');
+    });
+    document.getElementById('bgm-prev-btn').addEventListener('click', () => {
+      const title = ChillBGM.nextTrack(-1);
+      showToast(`⏮ 切換歌曲：${title}`);
+    });
+    document.getElementById('bgm-next-btn').addEventListener('click', () => {
+      const title = ChillBGM.nextTrack(1);
+      showToast(`⏭ 切換歌曲：${title}`);
+    });
+
+    dialogCloseBtn.addEventListener('click', closeAllModals);
+    newsCloseBtn.addEventListener('click', closeAllModals);
+    tpCloseBtn.addEventListener('click', closeAllModals);
+
+    rpgOverlay.addEventListener('click', (e) => {
+      if (e.target === rpgOverlay) closeAllModals();
+    });
+    newsModal.addEventListener('click', (e) => {
+      if (e.target === newsModal) closeAllModals();
+    });
+    tpModal.addEventListener('click', (e) => {
+      if (e.target === tpModal) closeAllModals();
+    });
+
+    // ============================================================================
+    // 9. 碰撞檢測、玩家移動與島上動態更新
+    // ============================================================================
+    function canMoveTo(px, py) {
+      const pad = 12;
+      const corners = [
+        [px - pad, py - 4],
+        [px + pad, py - 4],
+        [px - pad, py + 14],
+        [px + pad, py + 14]
+      ];
+      for (const [cx, cy] of corners) {
+        const tx = Math.floor(cx / TILE_SIZE);
+        const ty = Math.floor(cy / TILE_SIZE);
+        if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) return false;
+        if (World.solid[ty][tx]) return false;
+      }
+      return true;
+    }
+
+    // NPC 專用碰撞檢測（確保 NPC 絕對唔會穿過建築物、大樹、長椅或噴泉）
+    function canNpcMoveTo(px, py) {
+      const pad = 10;
+      const corners = [
+        [px - pad, py - 4],
+        [px + pad, py - 4],
+        [px - pad, py + 12],
+        [px + pad, py + 12]
+      ];
+      for (const [cx, cy] of corners) {
+        const tx = Math.floor(cx / TILE_SIZE);
+        const ty = Math.floor(cy / TILE_SIZE);
+        if (tx < 5 || tx >= MAP_W - 5 || ty < 5 || ty >= MAP_H - 5) return false;
+        if (World.solid[ty][tx]) return false;
+      }
+      return true;
+    }
+
+    function updateSimulation(dt) {
+      WorldTime.update(dt);
+      clockDisplay.textContent = WorldTime.getFormatted();
+
+      if (player.teleportFlash > 0) {
+        player.teleportFlash = Math.max(0, player.teleportFlash - dt * 1.8);
+      }
+
+      if (player.boostTimer > 0) {
+        player.boostTimer = Math.max(0, player.boostTimer - dt);
+        speedTimerEl.textContent = String(Math.ceil(player.boostTimer));
+        if (player.boostTimer === 0) {
+          speedPill.classList.remove('active');
+          showToast('🍦 軟雪糕加速效果已結束！');
+        }
+      }
+
+      // 玩家移動計算
+      let vx = 0;
+      let vy = 0;
+      if (!isModalOpen) {
+        if (keys.left) vx -= 1;
+        if (keys.right) vx += 1;
+        if (keys.up) vy -= 1;
+        if (keys.down) vy += 1;
+
+        if (joyVec.active) {
+          vx = joyVec.x;
+          vy = joyVec.y;
+        } else if (vx !== 0 && vy !== 0) {
+          const inv = 1 / Math.SQRT2;
+          vx *= inv;
+          vy *= inv;
+        }
+      }
+
+      const moving = Math.hypot(vx, vy) > 0.05;
+      if (moving) {
+        if (Math.abs(vx) > Math.abs(vy)) {
+          player.dir = vx < 0 ? 'left' : 'right';
+        } else {
+          player.dir = vy < 0 ? 'up' : 'down';
+        }
+
+        const speed = player.baseSpeed * (player.boostTimer > 0 ? 1.65 : 1);
+        const nextX = player.x + vx * speed * dt;
+        const nextY = player.y + vy * speed * dt;
+
+        if (canMoveTo(nextX, player.y)) player.x = nextX;
+        if (canMoveTo(player.x, nextY)) player.y = nextY;
+
+        player.stepTimer += dt;
+        if (player.stepTimer >= 0.14) {
+          player.stepTimer = 0;
+          player.stepFrame = player.stepFrame === 1 ? 2 : 1;
+        }
+
+        stepSoundCooldown -= dt;
+        if (stepSoundCooldown <= 0) {
+          SoundFX.step();
+          stepSoundCooldown = player.boostTimer > 0 ? 0.2 : 0.3;
+        }
+      } else {
+        player.stepFrame = 0;
+        player.stepTimer = 0;
+      }
+
+      // 街坊 NPC 巡邏移動（自動轉向面對前進方向 + 碰撞防穿牆）
+      npcs.forEach(npc => {
+        const [wx, wy] = npc.waypoints[npc.wpIndex];
+        const tx = wx * TILE_SIZE;
+        const ty = wy * TILE_SIZE;
+        const dx = tx - npc.x;
+        const dy = ty - npc.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist < 6) {
+          npc.wpIndex = (npc.wpIndex + 1) % npc.waypoints.length;
+        } else {
+          const stepX = (dx / dist) * npc.speed * dt;
+          const stepY = (dy / dist) * npc.speed * dt;
+
+          // 根據實際移動向量更新面向（絕對不會向後行！）
+          if (Math.abs(dx) > Math.abs(dy)) {
+            npc.dir = dx < 0 ? 'left' : 'right';
+          } else {
+            npc.dir = dy < 0 ? 'up' : 'down';
+          }
+
+          let moved = false;
+          if (canNpcMoveTo(npc.x + stepX, npc.y)) {
+            npc.x += stepX;
+            moved = true;
+          }
+          if (canNpcMoveTo(npc.x, npc.y + stepY)) {
+            npc.y += stepY;
+            moved = true;
+          }
+
+          if (!moved) {
+            // 若前方受阻則自動轉往下一個巡邏點
+            npc.wpIndex = (npc.wpIndex + 1) % npc.waypoints.length;
+          }
+
+          npc.stepTimer += dt;
+          if (npc.stepTimer >= 0.2) {
+            npc.stepTimer = 0;
+            npc.stepFrame = (npc.stepFrame + 1) % 3;
+          }
+        }
+      });
+
+      // 多利游泳池泳客來回游泳
+      swimmers.forEach(sw => {
+        sw.x += sw.vx * dt;
+        if (sw.x < sw.minX) { sw.x = sw.minX; sw.vx = Math.abs(sw.vx); }
+        if (sw.x > sw.maxX) { sw.x = sw.maxX; sw.vx = -Math.abs(sw.vx); }
+      });
+
+      // 老虎山地鐵列車行駛
+      if (train.waitTimer > 0) {
+        train.waitTimer -= dt;
+      } else {
+        train.x -= train.speed * dt;
+        if (train.x < 33.5 * TILE_SIZE) {
+          train.x = 54 * TILE_SIZE;
+          train.waitTimer = 3.5;
+        }
+      }
+
+      // 市區汽車與的士行駛
+      cars.forEach(car => {
+        car.x += car.vx * dt;
+        if (car.x > car.maxX) { car.x = car.maxX; car.vx = -Math.abs(car.vx); }
+        if (car.x < car.minX) { car.x = car.minX; car.vx = Math.abs(car.vx); }
+      });
+
+      // 外海木舢舨巡航
+      boats.forEach(b => {
+        if (b.vy) {
+          b.y += b.vy * dt;
+          if (b.y > b.maxY || b.y < b.minY) b.vy = -b.vy;
+        }
+        if (b.vx) {
+          b.x += b.vx * dt;
+          if (b.x > b.maxX || b.x < b.minX) {
+            b.vx = -b.vx;
+            b.flip = b.vx < 0;
+          }
+        }
+      });
+
+      // 偵測附近可互動目標（地標建築優先，其次為街坊 NPC）
+      let bestTarget = null;
+      let bestDist = Infinity;
+
+      World.hotspots.forEach(spot => {
+        const sx = spot.tx * TILE_SIZE;
+        const sy = spot.ty * TILE_SIZE;
+        const d = Math.hypot(player.x - sx, player.y - sy);
+        if (d <= spot.radius * TILE_SIZE && d < bestDist) {
+          bestDist = d;
+          bestTarget = {
+            kind: 'hotspot',
+            x: sx,
+            y: sy - 20,
+            prompt: spot.prompt,
+            data: spot
+          };
+        }
+      });
+
+      if (!bestTarget) {
+        npcs.forEach(npc => {
+          const d = Math.hypot(player.x - npc.x, player.y - npc.y);
+          if (d <= 1.7 * TILE_SIZE && d < bestDist) {
+            bestDist = d;
+            bestTarget = {
+              kind: 'npc',
+              x: npc.x,
+              y: npc.y - 26,
+              prompt: `按 [E] 同${npc.name}傾偈`,
+              data: npc
+            };
+          }
+        });
+      }
+
+      activeTarget = bestTarget;
+      if (activeTarget && !isModalOpen) {
+        actionBtn.classList.add('highlight');
+      } else {
+        actionBtn.classList.remove('highlight');
+      }
+    }
+
+    // ============================================================================
+    // 10. 2.5D 像素世界與日夜光影主渲染器
+    // ============================================================================
+    function drawRoadDetails(ctx, x, y, px, py) {
+      // 港式雙黃線與行車虛線
+      const upRoad = y > 0 && World.ground[y - 1][x] === TILE.ROAD;
+      const downRoad = y < MAP_H - 1 && World.ground[y + 1][x] === TILE.ROAD;
+      const leftRoad = x > 0 && World.ground[y][x - 1] === TILE.ROAD;
+      const rightRoad = x < MAP_W - 1 && World.ground[y][x + 1] === TILE.ROAD;
+
+      // 水平馬路中央虛線
+      if (leftRoad && rightRoad && !upRoad && downRoad) {
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(px + 8, py + TILE_SIZE - 2, TILE_SIZE - 16, 4);
+      }
+      // 垂直馬路中央虛線
+      if (upRoad && downRoad && !leftRoad && rightRoad) {
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(px + TILE_SIZE - 2, py + 8, 4, TILE_SIZE - 16);
+      }
+
+      // 路邊港式雙黃線
+      ctx.fillStyle = '#facc15';
+      if (!upRoad && y > 0 && World.ground[y - 1][x] === TILE.SIDEWALK) {
+        ctx.fillRect(px, py + 3, TILE_SIZE, 2);
+        ctx.fillRect(px, py + 7, TILE_SIZE, 2);
+      }
+      if (!downRoad && y < MAP_H - 1 && World.ground[y + 1][x] === TILE.SIDEWALK) {
+        ctx.fillRect(px, py + TILE_SIZE - 5, TILE_SIZE, 2);
+        ctx.fillRect(px, py + TILE_SIZE - 9, TILE_SIZE, 2);
+      }
+
+      // 斑馬線（於主要路口位置）
+      if ((x === 26 || x === 27) && (y === 12 || y === 13 || y === 29 || y === 30)) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+        for (let sx = px + 6; sx < px + TILE_SIZE - 4; sx += 12) {
+          ctx.fillRect(sx, py + 4, 6, TILE_SIZE - 8);
+        }
+      }
+
+      // 寫實馬路雨水渠蓋 (Storm Drain Grate) 與沙井蓋細節
+      if ((x === 14 || x === 23 || x === 31 || x === 38) && (y === 12 || y === 29)) {
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(px + 12, py + 10, 22, 12);
+        ctx.fillStyle = '#090d16';
+        for (let gx = px + 14; gx <= px + 30; gx += 4) {
+          ctx.fillRect(gx, py + 12, 2, 8);
+        }
+      }
+      if ((x === 19 || x === 35 || x === 42) && (y === 16 || y === 24)) {
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(px + 16, py + 16, 16, 16);
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(px + 16, py + 16, 16, 16);
+      }
+    }
+
+    function drawMinimap() {
+      const w = minimapCanvas.width;
+      const h = minimapCanvas.height;
+      const cw = w / MAP_W;
+      const ch = h / MAP_H;
+
+      minimapCtx.clearRect(0, 0, w, h);
+      for (let y = 0; y < MAP_H; y++) {
+        for (let x = 0; x < MAP_W; x++) {
+          const t = World.ground[y][x];
+          if (t === TILE.WATER) minimapCtx.fillStyle = '#155e96';
+          else if (t === TILE.ROAD) minimapCtx.fillStyle = '#334155';
+          else if (t === TILE.SIDEWALK || t === TILE.PARK_PATH) minimapCtx.fillStyle = '#cbd5e1';
+          else if (t === TILE.PIER) minimapCtx.fillStyle = '#b45309';
+          else if (t === TILE.POOL_WATER) minimapCtx.fillStyle = '#38bdf8';
+          else if (t === TILE.MOUNTAIN) minimapCtx.fillStyle = '#166534';
+          else minimapCtx.fillStyle = '#22c55e';
+          minimapCtx.fillRect(x * cw, y * ch, Math.ceil(cw), Math.ceil(ch));
+        }
+      }
+
+      // 玩家閃爍紅點
+      const px = (player.x / TILE_SIZE) * cw;
+      const py = (player.y / TILE_SIZE) * ch;
+      minimapCtx.fillStyle = '#ef4444';
+      minimapCtx.beginPath();
+      minimapCtx.arc(px, py, 3.5, 0, Math.PI * 2);
+      minimapCtx.fill();
+      minimapCtx.strokeStyle = '#ffffff';
+      minimapCtx.lineWidth = 1.5;
+      minimapCtx.stroke();
+    }
+
+    function render(time) {
+      const isNight = WorldTime.isNightOrDusk();
+      const ambient = WorldTime.getAmbientOverlay();
+
+      // 鏡頭平滑跟隨玩家
+      const worldPxW = MAP_W * TILE_SIZE;
+      const worldPxH = MAP_H * TILE_SIZE;
+      const targetCamX = Math.max(0, Math.min(worldPxW - viewW, player.x - viewW / 2));
+      const targetCamY = Math.max(0, Math.min(worldPxH - viewH, player.y - viewH / 2));
+      camera.x += (targetCamX - camera.x) * 0.16;
+      camera.y += (targetCamY - camera.y) * 0.16;
+
+      ctx.fillStyle = '#155e96';
+      ctx.fillRect(0, 0, viewW, viewH);
+
+      ctx.save();
+      ctx.translate(-Math.floor(camera.x), -Math.floor(camera.y));
+
+      // 1. 繪製可視範圍地面圖磚
+      const startCol = Math.max(0, Math.floor(camera.x / TILE_SIZE) - 1);
+      const endCol = Math.min(MAP_W - 1, Math.ceil((camera.x + viewW) / TILE_SIZE) + 1);
+      const startRow = Math.max(0, Math.floor(camera.y / TILE_SIZE) - 1);
+      const endRow = Math.min(MAP_H - 1, Math.ceil((camera.y + viewH) / TILE_SIZE) + 1);
+
+      const waterIdx = Math.floor(time / 420) % 3;
+      const poolIdx = Math.floor(time / 500) % 2;
+
+      for (let y = startRow; y <= endRow; y++) {
+        for (let x = startCol; x <= endCol; x++) {
+          const tile = World.ground[y][x];
+          const px = x * TILE_SIZE;
+          const py = y * TILE_SIZE;
+
+          let img = Sprites.tiles[tile];
+          if (tile === TILE.WATER) img = Sprites.tiles.waterFrames[waterIdx];
+          else if (tile === TILE.POOL_WATER) img = Sprites.tiles.poolFrames[poolIdx];
+
+          if (img) {
+            ctx.drawImage(img, px, py, TILE_SIZE, TILE_SIZE);
+          }
+          if (tile === TILE.ROAD) {
+            drawRoadDetails(ctx, x, y, px, py);
+          }
+          // 維多利公園草坪自然小草叢點綴（取代舊花圃，更清雅自然）
+          if (tile === TILE.GRASS && x >= 20 && x <= 33 && y >= 14 && y <= 28 && (x * 7 + y * 13) % 5 === 0) {
+            ctx.fillStyle = '#2d7a39';
+            ctx.fillRect(px + 14, py + 24, 3, 6);
+            ctx.fillRect(px + 19, py + 22, 3, 8);
+            ctx.fillRect(px + 24, py + 25, 3, 5);
+          }
+        }
+      }
+
+      // 1.5 繪製自然融入路面／石板／海堤／棧道背景嘅 hkgames.fun 字樣
+      ctx.save();
+      ctx.textAlign = 'center';
+      World.bgBrandMarks.forEach(mark => {
+        ctx.font = `700 ${mark.size}px "Press Start 2P", monospace`;
+        ctx.fillStyle = mark.color;
+        ctx.fillText(mark.text, mark.tx * TILE_SIZE, mark.ty * TILE_SIZE);
+      });
+      ctx.restore();
+
+      // 2. 收集所有需要 2.5D Y 軸景深排序嘅物件
+      const renderables = [];
+
+      World.structures.forEach(s => {
+        renderables.push({
+          sortY: (s.ty + s.th) * TILE_SIZE,
+          draw() {
+            s.draw(ctx, s.tx * TILE_SIZE, s.ty * TILE_SIZE, s.tw * TILE_SIZE, s.th * TILE_SIZE, time, isNight);
+          }
+        });
+      });
+
+      // 港鐵列車
+      renderables.push({
+        sortY: train.y + 34,
+        draw() {
+          const tx = train.x;
+          const ty = train.y - 10;
+          const tw = 220;
+          const th = 36;
+          ctx.fillStyle = '#e2e8f0';
+          ctx.fillRect(tx, ty, tw, th);
+          ctx.strokeStyle = '#090d16';
+          ctx.lineWidth = 2.5;
+          ctx.strokeRect(tx, ty, tw, th);
+          ctx.fillStyle = '#dc2626';
+          ctx.fillRect(tx, ty + 14, tw, 7);
+          ctx.fillStyle = isNight ? '#fef08a' : '#38bdf8';
+          for (let wx = tx + 14; wx < tx + tw - 16; wx += 26) {
+            ctx.fillRect(wx, ty + 5, 16, 8);
+          }
+        }
+      });
+
+      // 市區車輛與港式紅的
+      cars.forEach(car => {
+        renderables.push({
+          sortY: car.y + 24,
+          draw() {
+            ctx.fillStyle = 'rgba(0,0,0,0.35)';
+            ctx.fillRect(car.x + 2, car.y + 24, 52, 8);
+            ctx.fillStyle = car.color;
+            ctx.fillRect(car.x, car.y + 8, 56, 18);
+            ctx.strokeStyle = '#090d16';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(car.x, car.y + 8, 56, 18);
+            ctx.fillStyle = car.isTaxi ? '#f8fafc' : car.color;
+            ctx.fillRect(car.x + 10, car.y, 34, 10);
+            ctx.strokeRect(car.x + 10, car.y, 34, 10);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(car.x + 13, car.y + 2, 12, 6);
+            ctx.fillRect(car.x + 28, car.y + 2, 12, 6);
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(car.x + 8, car.y + 23, 10, 7);
+            ctx.fillRect(car.x + 38, car.y + 23, 10, 7);
+          }
+        });
+      });
+
+      // 外海木舢舨
+      boats.forEach(b => {
+        renderables.push({
+          sortY: b.y + 22,
+          draw() {
+            ArtHelper.drawRealisticSampan(ctx, b.x, b.y, b.color, time, isNight, b.flip);
+          }
+        });
+      });
+
+      // 多利游泳池泳客
+      swimmers.forEach(sw => {
+        renderables.push({
+          sortY: sw.y + 12,
+          draw() {
+            ctx.fillStyle = '#bae6fd';
+            ctx.fillRect(sw.x - 12, sw.y + 4, 24, 5);
+            ctx.fillStyle = '#ffddb3';
+            ctx.beginPath();
+            ctx.arc(sw.x, sw.y, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = sw.color;
+            ctx.beginPath();
+            ctx.arc(sw.x, sw.y - 2, 7, Math.PI, Math.PI * 2);
+            ctx.fill();
+          }
+        });
+      });
+      // 島上街坊 NPC（依當前方向繪製正面/背面/側面動畫）
+      npcs.forEach(npc => {
+        renderables.push({
+          sortY: npc.y + 20,
+          draw() {
+            const dirSet = Sprites.npcs[npc.spriteKey];
+            const frames = dirSet[npc.dir] || dirSet.down;
+            const sprite = frames[npc.stepFrame % frames.length];
+            ctx.drawImage(sprite, npc.x - 24, npc.y - 28, 48, 48);
+          }
+        });
+      });
+
+      // 玩家角色
+      renderables.push({
+        sortY: player.y + 20,
+        draw() {
+          if (player.boostTimer > 0) {
+            ctx.strokeStyle = 'rgba(255, 212, 59, 0.8)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.ellipse(player.x, player.y + 16, 20, 9, 0, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          if (player.teleportFlash > 0) {
+            ctx.strokeStyle = `rgba(56, 189, 248, ${player.teleportFlash})`;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, (1.2 - player.teleportFlash) * 48, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          const sprite = Sprites.player[player.dir][player.stepFrame];
+          ctx.drawImage(sprite, player.x - 24, player.y - 28, 48, 48);
+        }
+      });
+
+      // 執行 2.5D 景深排序繪製
+      renderables.sort((a, b) => a.sortY - b.sortY);
+      renderables.forEach(item => item.draw());
+
+      // 2.8 繪製港式灰色行人路鐵欄杆 (HK Pedestrian Steel Railings)
+      World.pedestrianRailings.forEach(rail => {
+        if (rail.horiz) {
+          const sx = rail.x1 * TILE_SIZE;
+          const ex = rail.x2 * TILE_SIZE;
+          const ry = rail.y * TILE_SIZE;
+          ctx.fillStyle = '#090d16';
+          ctx.fillRect(sx, ry - 14, ex - sx, 4);
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillRect(sx, ry - 13, ex - sx, 2);
+          for (let rx = sx; rx <= ex; rx += 18) {
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(rx, ry - 14, 3, 14);
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillRect(rx, ry - 14, 1, 14);
+          }
+        } else {
+          const rx = rail.x * TILE_SIZE;
+          const sy = rail.y1 * TILE_SIZE;
+          const ey = rail.y2 * TILE_SIZE;
+          for (let ry = sy; ry <= ey; ry += 18) {
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(rx - 2, ry - 14, 4, 14);
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillRect(rx - 1, ry - 14, 2, 12);
+          }
+        }
+      });
+
+      // 3. 繪製路邊街燈與港式橙色垃圾桶
+      World.streetLamps.forEach(([lx, ly], idx) => {
+        const px = lx * TILE_SIZE;
+        const py = ly * TILE_SIZE;
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(px - 2, py - 34, 4, 34);
+        ctx.fillStyle = isNight ? '#fef08a' : '#cbd5e1';
+        ctx.beginPath();
+        ctx.arc(px, py - 36, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (idx % 2 === 0) {
+          ctx.fillStyle = '#ea580c';
+          ctx.fillRect(px + 6, py - 14, 9, 14);
+          ctx.fillStyle = '#090d16';
+          ctx.fillRect(px + 7, py - 11, 7, 3);
+        }
+      });
+
+      // 4. 日夜環境光影與夜間燈火光暈
+      if (ambient.darkness > 0.02) {
+        ctx.fillStyle = ambient.color;
+        ctx.fillRect(camera.x, camera.y, viewW, viewH);
+
+        if (isNight) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          World.streetLamps.forEach(([lx, ly]) => {
+            const px = lx * TILE_SIZE;
+            const py = ly * TILE_SIZE - 34;
+            const grad = ctx.createRadialGradient(px, py, 2, px, py, 76);
+            grad.addColorStop(0, 'rgba(254, 240, 138, 0.36)');
+            grad.addColorStop(1, 'rgba(254, 240, 138, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(px, py, 76, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          // 玩家隨身微光
+          const pGrad = ctx.createRadialGradient(player.x, player.y, 4, player.x, player.y, 90);
+          pGrad.addColorStop(0, 'rgba(255, 250, 220, 0.25)');
+          pGrad.addColorStop(1, 'rgba(255, 250, 220, 0)');
+          ctx.fillStyle = pGrad;
+          ctx.beginPath();
+          ctx.arc(player.x, player.y, 90, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      // 5. 世界地標清晰招牌名牌
+      World.worldLabels.forEach(lbl => {
+        const lx = lbl.tx * TILE_SIZE;
+        const ly = lbl.ty * TILE_SIZE;
+        ctx.font = '900 14px "Noto Sans TC", sans-serif';
+        ctx.textAlign = 'center';
+        drawOutlinedText(ctx, lbl.title, lx, ly, '#ffffff', '#090d16', 4);
+        ctx.font = '700 11px "Noto Sans TC", sans-serif';
+        drawOutlinedText(ctx, lbl.sub, lx, ly + 15, '#ffd43b', '#090d16', 3);
+      });
+
+      // 6. 頭頂互動提示氣泡（行近目標時顯示）
+      if (activeTarget && !isModalOpen) {
+        const bob = Math.sin(time * 0.008) * 4;
+        const bx = activeTarget.x;
+        const by = activeTarget.y - 16 + bob;
+        ctx.font = '900 14px "Noto Sans TC", sans-serif';
+        const textW = ctx.measureText(activeTarget.prompt).width;
+        const boxW = textW + 22;
+        const boxH = 28;
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+        ctx.fillRect(bx - boxW / 2, by - boxH, boxW, boxH);
+        ctx.strokeStyle = '#ffd43b';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(bx - boxW / 2, by - boxH, boxW, boxH);
+
+        ctx.fillStyle = '#ffd43b';
+        ctx.textAlign = 'center';
+        ctx.fillText(activeTarget.prompt, bx, by - 9);
+      }
+
+      ctx.restore();
+
+      // 更新右上角迷你地圖
+      drawMinimap();
+      if (tpModal.classList.contains('open')) {
+        drawTeleportBlueprint();
+      }
+    }
+
+    // ============================================================================
+    // 11. 啟動遊戲主迴圈
+    // ============================================================================
+    let lastTimestamp = 0;
+    function gameLoop(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.1);
+      lastTimestamp = timestamp;
+
+      updateSimulation(dt);
+      render(timestamp);
+      requestAnimationFrame(gameLoop);
+    }
+
+    window.addEventListener('load', () => {
+      resizeCanvas();
+      requestAnimationFrame(gameLoop);
+    });
+  </script>
+</body>
+</html>
