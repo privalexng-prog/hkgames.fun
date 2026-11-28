@@ -1437,7 +1437,7 @@
         <div>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <span style="font-size:13px; font-weight:900; color:#ffd43b;">📋 島民與遊客足跡牆</span>
-            <span id="sig-total-count" style="font-size:12px; font-weight:800; color:#fde68a;">共 6 則簽名</span>
+            <span id="sig-total-count" style="font-size:12px; font-weight:800; color:#fde68a;">載入中...</span>
           </div>
           <div id="sig-corkboard" class="sig-corkboard"></div>
         </div>
@@ -4695,45 +4695,76 @@
     // ============================================================================
     // 5.5 維多利公園遊客簽名板 (Signature Board) 系統
     // ============================================================================
+    // ============================================================================
+    // 5.5 維多利公園遊客簽名板 (Signature Board) 雲端同步系統
+    // ============================================================================
     const VisitorSignatures = (() => {
-      const entries = [
-        { name: '長洲包山王', badge: '⛴️ 長洲出發', color: '#fef08a', msg: '搭天星渡輪過嚟維他利島散步，海風超舒服！', time: '今日 14:20' },
-        { name: '旺角阿明', badge: '🚇 轉車達人', color: '#bae6fd', msg: '老虎山地鐵站 1 分鐘轉車成功，留個名打卡！', time: '今日 14:55' },
-        { name: '波子頭號粉絲', badge: '🐈 撸貓成功', color: '#fecdd3', msg: '喺報紙檔隔離搵到橘貓波子，佢今日心情好好！', time: '今日 15:10' },
-        { name: '雪糕控嘉欣', badge: '🍦 嘆軟雪糕', color: '#fffbeb', msg: '食完富豪軟雪糕跑得特別快，全島到此一遊！', time: '今日 15:25' },
-        { name: '龍灣茶記常客', badge: '🧋 茶記常客', color: '#bbf7d0', msg: '飲完杯凍檸茶少甜少冰，維他利島真係好寫意～', time: '今日 15:38' },
-        { name: 'hkgames 島民', badge: '🏝️ 到此一遊', color: '#fef08a', msg: '歡迎大家登島！記得去碼頭釣魚試下手氣！', time: '今日 15:42' }
-      ];
+      // 已清空所有預設假資料，完全由 Cloudflare KV 讀取真實遊客留言
+      let entries = [];
+      let isLoading = false;
 
       let selectedBadge = '🏝️ 到此一遊';
       let selectedColor = '#fef08a';
+
+      function escapeHtml(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
 
       function renderBoard() {
         const board = document.getElementById('sig-corkboard');
         const countEl = document.getElementById('sig-total-count');
         if (!board) return;
         board.innerHTML = '';
+
+        if (isLoading) {
+          if (countEl) countEl.textContent = '同步雲端中...';
+          board.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:24px; color:#fef9c3; font-weight:800;">⏳ 正在讀取全服遊客簽名...</div>';
+          return;
+        }
+
         if (countEl) countEl.textContent = `共 ${entries.length} 則簽名`;
+
+        if (entries.length === 0) {
+          board.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:24px; color:#fef9c3; font-weight:800;">🏝️ 暫時未有遊客簽名，成為第一個到此一遊嘅島民！</div>';
+          return;
+        }
 
         entries.forEach(item => {
           const card = document.createElement('div');
           card.className = 'sig-note';
-          card.style.backgroundColor = item.color;
+          card.style.backgroundColor = item.color || '#fef08a';
+          const text = item.message || item.msg || '';
+          const dateText = item.date || item.time || '';
           card.innerHTML = `
-            <div class="sig-note-head">${item.badge} · ${escapeHtml(item.name)}</div>
-            <div class="sig-note-msg">${escapeHtml(item.msg)}</div>
-            <div class="sig-note-meta">🕒 ${escapeHtml(item.time)}</div>
+            <div class="sig-note-head">${escapeHtml(item.badge)} · ${escapeHtml(item.name)}</div>
+            <div class="sig-note-msg">${escapeHtml(text)}</div>
+            <div class="sig-note-meta">📅 ${escapeHtml(dateText)}</div>
           `;
           board.appendChild(card);
         });
       }
 
-      function escapeHtml(str) {
-        return String(str)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;');
+      // 從 Cloudflare Worker 讀取全服真實簽名
+      async function loadFromCloud() {
+        isLoading = true;
+        renderBoard();
+        try {
+          const res = await fetch('/api/signatures');
+          const data = await res.json();
+          if (data.ok && Array.isArray(data.signatures)) {
+            entries = data.signatures;
+          }
+        } catch (err) {
+          console.warn('讀取雲端簽名板失敗:', err);
+          showToast('⚠️ 暫時無法連線至雲端簽名板');
+        } finally {
+          isLoading = false;
+          renderBoard();
+        }
       }
 
       function initUI() {
@@ -4769,35 +4800,57 @@
         const form = document.getElementById('sig-form');
         const nameInput = document.getElementById('sig-name-input');
         if (form) {
-          form.addEventListener('submit', (e) => {
+          form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const rawName = (nameInput.value || '').trim();
             const rawMsg = (msgInput.value || '').trim();
             if (!rawName || !rawMsg) return;
 
-            const timeStr = WorldTime.getFormatted().split(' ')[0];
-            entries.unshift({
-              name: rawName,
-              badge: selectedBadge,
-              color: selectedColor,
-              msg: rawMsg,
-              time: `島上時間 ${timeStr}`
-            });
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+              submitBtn.disabled = true;
+              submitBtn.textContent = '⏳ 正在貼上雲端...';
+            }
 
-            msgInput.value = '';
-            renderBoard();
-            SoundFX.pinNote();
-            showToast(`📌 「${rawName}」嘅簽名已貼上維多利公園簽名板！`);
+            try {
+              const res = await fetch('/api/signatures', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  name: rawName,
+                  badge: selectedBadge,
+                  color: selectedColor,
+                  message: rawMsg
+                })
+              });
+              const data = await res.json();
+              if (!res.ok || !data.ok) {
+                throw new Error(data.error || '張貼失敗');
+              }
+
+              entries = data.signatures || entries;
+              msgInput.value = '';
+              renderBoard();
+              SoundFX.pinNote();
+              showToast(`📌 「${rawName}」嘅簽名已同步到全球簽名板！`);
+            } catch (err) {
+              showToast(`❌ ${err.message || '簽名上傳失敗，請稍後再試'}`);
+            } finally {
+              if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '📌 貼上簽名板';
+              }
+            }
           });
         }
       }
 
       return {
         open() {
-          renderBoard();
           sigModal.classList.add('open');
           syncModalState();
           SoundFX.blip();
+          loadFromCloud();
         },
         initUI
       };
