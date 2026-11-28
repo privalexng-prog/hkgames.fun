@@ -20,7 +20,8 @@
     "bindings": [
       {
         "name": "WATERPOLO_ROOM",
-        "class_name": "WaterPoloRoom"
+        "class_name": "WaterPoloRoom",
+        "script_name": "worker"
       }
     ]
   },
