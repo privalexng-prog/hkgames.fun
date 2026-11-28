@@ -1,4 +1,4 @@
-const VALID_STATIONS = ['northpoint', 'meifoo', 'admiralty', 'diamondhill', 'kowloontong'];
+const VALID_STATIONS = ['northpoint', 'meifoo', 'admiralty', 'diamondhill', 'kowloontong', 'tigerhill'];
 const VALID_DIFFS = ['easy', 'normal', 'hard'];
 const VALID_WP_MODES = ['classic7', 'classic5', 'beach'];
 
