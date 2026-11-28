@@ -304,7 +304,7 @@
           </h2>
           <span id="selectedStationBadge" class="text-[11px] bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded font-bold">已選：北角站（Default 標準直路）</span>
         </div>
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2" id="stationGrid">
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2" id="stationGrid">
           <button type="button" data-station="northpoint" class="station-btn pixel-btn bg-orange-900/85 border-yellow-400 text-center py-2.5 px-2 rounded">
             <div class="text-sm font-black text-orange-300">🟠 北角站</div>
             <div class="text-[11px] text-white font-bold mt-0.5">Default 標準直路</div>
@@ -329,10 +329,16 @@
             <div class="text-[10px] text-slate-300 mt-0.5">柱體盲點伏擊</div>
           </button>
 
-          <button type="button" data-station="kowloontong" class="station-btn pixel-btn bg-slate-800 text-center py-2.5 px-2 rounded col-span-2 sm:col-span-1">
+          <button type="button" data-station="kowloontong" class="station-btn pixel-btn bg-slate-800 text-center py-2.5 px-2 rounded">
             <div class="text-sm font-black text-cyan-300">🩵 九龍塘站</div>
             <div class="text-[11px] text-white font-bold mt-0.5">東鐵轉線大直路</div>
             <div class="text-[10px] text-cyan-200 mt-0.5">跨線人潮＋擔遮客</div>
+          </button>
+
+          <button type="button" data-station="tigerhill" class="station-btn pixel-btn bg-slate-800 text-center py-2.5 px-2 rounded">
+            <div class="text-sm font-black text-amber-300">🐯 老虎山 Tiger Hill</div>
+            <div class="text-[11px] text-white font-bold mt-0.5">維他利島聯動地鐵站</div>
+            <div class="text-[10px] text-amber-200 mt-0.5">單車人＋排球人＋招牌</div>
           </button>
         </div>
 
@@ -583,8 +589,8 @@
 
         <!-- Station & Difficulty Filter Tabs -->
         <div class="bg-slate-900 border-b-2 border-slate-700 p-2.5 space-y-2 shrink-0">
-          <!-- 5 Stations Tabs -->
-          <div class="grid grid-cols-5 gap-1.5" id="lbStationTabs">
+          <!-- 6 Stations Tabs -->
+          <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5" id="lbStationTabs">
             <button type="button" data-lb-station="northpoint" class="lb-st-btn pixel-btn bg-orange-900/90 border-yellow-400 text-[11px] sm:text-xs font-black text-orange-200 py-1.5 px-1 rounded">
               🟠 北角站
             </button>
@@ -599,6 +605,9 @@
             </button>
             <button type="button" data-lb-station="kowloontong" class="lb-st-btn pixel-btn bg-slate-800 text-[11px] sm:text-xs font-black text-cyan-300 py-1.5 px-1 rounded">
               🩵 九龍塘
+            </button>
+            <button type="button" data-lb-station="tigerhill" class="lb-st-btn pixel-btn bg-slate-800 text-[11px] sm:text-xs font-black text-amber-300 py-1.5 px-1 rounded">
+              🐯 老虎山
             </button>
           </div>
 
@@ -642,8 +651,6 @@
     // ============================================================================
     // 0. CLOUDFLARE PAGES / WORKER CLOUD LEADERBOARD CLIENT
     // ============================================================================
-    // 部署喺 GitHub + Cloudflare Pages 時，預設會自動請求同網域嘅 '/api/leaderboard'
-    // (對應你 GitHub Repo 內嘅 functions/api/leaderboard.js + Cloudflare KV 綁定)
     const CLOUD_LEADERBOARD_CONFIG = {
       apiEndpoint: '/api/leaderboard',
       gameId: 'mtr_transfer_survival',
@@ -741,7 +748,6 @@
           updatedAt: Date.now()
         };
 
-        // Always update local cache mirror first
         const key = this._boardKey(entry.station, entry.difficulty);
         const store = this._getLocalStore();
         const list = store[key] || [];
@@ -804,9 +810,6 @@
     // ============================================================================
     // 1. 8-BIT WEB AUDIO API SYNTHESIZER (港鐵關門聲、提示音與復古音效)
     // ============================================================================
-    // ============================================================================
-    // 1. 8-BIT WEB AUDIO API SYNTHESIZER (港鐵關門聲、提示音與復古音效)
-    // ============================================================================
     class RetroAudioEngine {
       constructor() {
         this.ctx = null;
@@ -817,6 +820,7 @@
         this.hussSfx = new Audio('huss.mp3');
         this.hussSfx.preload = 'auto';
       }
+
       playHussJump() {
         if (this.muted || !this.hussSfx) return;
         const sfx = this.hussSfx.cloneNode();
@@ -901,11 +905,22 @@
           this.playTone(698.46, 0.10, 'square', 0.13, 0.12);
           this.playTone(880.00, 0.10, 'square', 0.13, 0.24);
           this.playTone(1046.50, 0.25, 'square', 0.14, 0.36);
+        } else if (stationKey === 'tigerhill') {
+          // Victary Island / Tiger Hill cheerful island chime
+          this.playTone(523.25, 0.11, 'triangle', 0.13, 0);
+          this.playTone(659.25, 0.11, 'triangle', 0.13, 0.11);
+          this.playTone(783.99, 0.11, 'triangle', 0.13, 0.22);
+          this.playTone(1046.50, 0.24, 'triangle', 0.15, 0.33);
         } else {
           this.playTone(587.33, 0.14, 'sine', 0.15, 0);
           this.playTone(739.99, 0.14, 'sine', 0.15, 0.15);
           this.playTone(880.00, 0.26, 'sine', 0.15, 0.30);
         }
+      }
+
+      playBikeBell() {
+        this.playTone(1318.5, 0.08, 'sine', 0.12, 0);
+        this.playTone(1567.98, 0.12, 'sine', 0.12, 0.08);
       }
 
       playJump() {
@@ -1040,6 +1055,310 @@
         }
       }
       return c;
+    }
+
+    /**
+     * Ported directly from index(26).html buildHumanSprite so Tiger Hill NPCs
+     * & Volleyball Players share the exact 16-bit character models of Victary Island!
+     */
+    function buildV26HumanSprite(palette, dir, step, scale = 3) {
+      const c = document.createElement('canvas');
+      c.width = 16 * scale;
+      c.height = 16 * scale;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+
+      const fill = (x, y, w, h, col) => {
+        ctx.fillStyle = col;
+        ctx.fillRect(x * scale, y * scale, w * scale, h * scale);
+      };
+
+      const bob = step === 0 ? 0 : -1;
+      let leftLegY = 12, rightLegY = 12;
+      if (step === 1) { leftLegY = 11; rightLegY = 13; }
+      if (step === 2) { leftLegY = 13; rightLegY = 11; }
+
+      if (dir === 'up') {
+        fill(3, 6 + bob, 10, 7, '#111625');
+        fill(4, 7 + bob, 8, 5, palette.bag);
+        fill(5, 9 + bob, 6, 1, palette.bagDark);
+      } else if (dir === 'left') {
+        fill(10, 6 + bob, 4, 7, '#111625');
+        fill(10, 7 + bob, 3, 5, palette.bag);
+      } else if (dir === 'right') {
+        fill(2, 6 + bob, 4, 7, '#111625');
+        fill(3, 7 + bob, 3, 5, palette.bag);
+      }
+
+      fill(4, 6 + bob, 8, 6, '#111625');
+      fill(5, 7 + bob, 6, 5, palette.shirt);
+
+      if (dir === 'down') {
+        fill(5, 7 + bob, 1, 4, palette.bag);
+        fill(10, 7 + bob, 1, 4, palette.bag);
+      }
+
+      fill(5, leftLegY, 2, 2, palette.pants);
+      fill(9, rightLegY, 2, 2, palette.pants);
+      fill(5, leftLegY + 1, 2, 1, palette.shoes);
+      fill(9, rightLegY + 1, 2, 1, palette.shoes);
+
+      fill(3, 1 + bob, 10, 6, '#111625');
+      fill(4, 2 + bob, 8, 5, palette.skin);
+
+      fill(4, 1 + bob, 8, 2, palette.hair);
+      if (dir === 'up') {
+        fill(4, 2 + bob, 8, 5, palette.hair);
+      } else if (dir === 'left') {
+        fill(9, 2 + bob, 3, 4, palette.hair);
+      } else if (dir === 'right') {
+        fill(4, 2 + bob, 3, 4, palette.hair);
+      } else {
+        fill(4, 2 + bob, 1, 2, palette.hair);
+        fill(11, 2 + bob, 1, 2, palette.hair);
+      }
+
+      if (dir === 'down') {
+        fill(6, 4 + bob, 1, 2, '#090d16');
+        fill(9, 4 + bob, 1, 2, '#090d16');
+      } else if (dir === 'left') {
+        fill(5, 4 + bob, 1, 2, '#090d16');
+      } else if (dir === 'right') {
+        fill(10, 4 + bob, 1, 2, '#090d16');
+      }
+
+      return c;
+    }
+
+    /**
+     * Ported directly from index(26).html buildCat4Dir (橘貓「波子」)
+     */
+    function buildV26CatSprite(flipX = false, step = 0, scale = 3) {
+      const catPal = { '.': null, O: '#f97316', D: '#c2410c', W: '#ffedd5', E: '#090d16' };
+      const mat = [
+        '................',
+        '................',
+        '................',
+        '................',
+        '...O..O.........',
+        '...OOOO.........',
+        '..OEOOEO.....OO.',
+        '..OOWWOO....O..O',
+        '...OOOOOOO.O....',
+        '...OO.OOOOOO....',
+        '....OOOOOOO.....',
+        step === 0 ? '....O.O.O.O.....' : '...O..O..O.O....',
+        '................',
+        '................',
+        '................',
+        '................'
+      ];
+      const c = document.createElement('canvas');
+      c.width = 16 * scale;
+      c.height = 16 * scale;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
+          const col = catPal[mat[y][x]];
+          if (!col) continue;
+          ctx.fillStyle = col;
+          const dx = flipX ? (15 - x) * scale : x * scale;
+          ctx.fillRect(dx, y * scale, scale, scale);
+        }
+      }
+      return c;
+    }
+
+    /**
+     * Exact pixel cyclist model from index(26).html ArtHelper.drawPixelCyclist
+     */
+    function drawV26PixelCyclist(ctx, x, y, dir, frameColor, helmetColor, time) {
+      const cx = Math.round(x);
+      const cy = Math.round(y - 16);
+      const pedal = Math.sin(time * 0.016) * 3;
+      const bob = Math.abs(Math.sin(time * 0.016)) * 1.5;
+
+      // Ground shadow
+      ctx.fillStyle = 'rgba(9, 13, 22, 0.36)';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + 16, 24, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const flip = dir === 'left' ? -1 : 1;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(flip * 1.15, 1.15);
+
+      // Rear & front wheels
+      [-14, 14].forEach(wx => {
+        ctx.strokeStyle = '#090d16';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(wx, 8, 8, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(wx, 8, 6, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Spinning spokes
+        const ang = (time * 0.014) % Math.PI;
+        ctx.beginPath();
+        ctx.moveTo(wx + Math.cos(ang) * 5, 8 + Math.sin(ang) * 5);
+        ctx.lineTo(wx - Math.cos(ang) * 5, 8 - Math.sin(ang) * 5);
+        ctx.stroke();
+      });
+
+      // Bicycle frame
+      ctx.strokeStyle = frameColor;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-14, 8);
+      ctx.lineTo(-2, 8);
+      ctx.lineTo(8, -2);
+      ctx.lineTo(-5, -2);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Front fork & handlebar
+      ctx.beginPath();
+      ctx.moveTo(14, 8);
+      ctx.lineTo(7, -8);
+      ctx.lineTo(11, -10);
+      ctx.stroke();
+
+      // Pedaling legs
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(-4, 4 + pedal * 0.5, 5, 6);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(-4, 9 + pedal * 0.5, 6, 3);
+
+      // Rider torso
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(-8, -14 - bob, 12, 13);
+      ctx.fillStyle = frameColor;
+      ctx.fillRect(-7, -13 - bob, 10, 11);
+
+      // Arms gripping handlebars
+      ctx.fillStyle = '#ffddb3';
+      ctx.fillRect(1, -11 - bob, 9, 4);
+
+      // Head & bicycle helmet
+      ctx.fillStyle = '#ffddb3';
+      ctx.fillRect(-4, -23 - bob, 10, 9);
+      ctx.fillStyle = helmetColor;
+      ctx.fillRect(-5, -26 - bob, 12, 5);
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(3, -20 - bob, 2, 2);
+
+      ctx.restore();
+    }
+
+    /**
+     * Exact 16-bit volleyball model from index(26).html VolleyballGame
+     */
+    function drawV26Volleyball(ctx, bx, groundY, ballZ, isSpike = false) {
+      const ballY = Math.round(groundY - ballZ);
+
+      // Ground shadow
+      ctx.fillStyle = 'rgba(9, 13, 22, 0.42)';
+      ctx.beginPath();
+      ctx.ellipse(bx, groundY + 3, 9, 4.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (isSpike) {
+        ctx.fillStyle = 'rgba(251, 146, 60, 0.65)';
+        ctx.beginPath();
+        ctx.arc(bx, ballY, 11, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Classic white/blue/yellow 16-bit volleyball
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(bx, ballY, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#2563eb';
+      ctx.fillRect(bx - 5, ballY - 2, 10, 3);
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(bx - 2, ballY - 5, 4, 10);
+      ctx.strokeStyle = '#090d16';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(bx, ballY, 7, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    /**
+     * Exact 16-bit pixel graffiti & corrugated awning helpers from index(26).html
+     */
+    function drawV26CorrugatedAwning(ctx, x, y, w, h, mainColor, darkColor) {
+      ctx.fillStyle = mainColor;
+      ctx.fillRect(x, y, w, h);
+      for (let rx = x; rx < x + w; rx += 6) {
+        ctx.fillStyle = darkColor;
+        ctx.fillRect(rx, y, 2, h);
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.fillRect(rx + 2, y, 2, h - 2);
+      }
+      ctx.fillStyle = '#7c2d12';
+      ctx.fillRect(x, y + h - 3, w, 3);
+    }
+
+    function drawV26PixelGraffiti(ctx, x, y, variant = 'mtr_small') {
+      const graffPal = {
+        '.': null,
+        K: '#090d16',
+        C: '#22d3ee',
+        B: '#0284c7',
+        M: '#f43f5e',
+        P: '#be123c',
+        Y: '#facc15',
+        O: '#ea580c',
+        G: '#a3e635',
+        W: '#ffffff'
+      };
+      const matrix = variant === 'pool'
+        ? [
+            '..KKKK..KKKKK..KKK....KKKK...KKKK..KKK..KKK...CCC.....YYY...',
+            '.KYYYYKKMMWWWK.KGGK..KCCWWK.KYYYYKKMMWK.KMMK.CWWWC...YWWWY..',
+            '.KYYKK.KMMWWWK.KGGK.KCCWWCCKKYYKK.KMMWKKKMMK..CCC..CC.YYY.CC',
+            '..KYYK.KMMMMK..KGGK.KCCWWCCK.KYYK.KMMMMMWMMK.....CCWWCCCCCWW',
+            '.KKYYK.KMMKK...KGGKKKCCWWCCKKKYYK.KMMWKKKMMK...CCBBBBBBBBBWW',
+            '.KYYYYKKMMK....KGGGGKCCKKCCKKYYYYKKMMWK.KMMK.CCBBBBBBBBBBBBB',
+            '..KKKK..KK......KKKK.KK..KK..KKKK..KKK..KKK..CCCCCCCCCCCCCCC'
+          ]
+        : [
+            '....Y..Y....',
+            '...YYYYYY...',
+            '...YWWWWY...',
+            '..KKKKKKKK..',
+            '.KMMWWWWMMK.',
+            '.KMMWWWWMMK.',
+            '.KPPMMMMPPK.',
+            '..KKKKKKKK..',
+            '.KCCWWWWCCK.',
+            '.KCCWWWWCCK.',
+            '.KBBCCCCBBK.',
+            '..KKKKKKKK..',
+            '.KGGWWWWGGK.',
+            '.KGGWWWWGGK.',
+            '..KKKKKKKK..',
+            '...MM..CC...',
+            '...MM.......'
+          ];
+      const px = 2;
+      for (let r = 0; r < matrix.length; r++) {
+        for (let c = 0; c < matrix[r].length; c++) {
+          const col = graffPal[matrix[r][c]];
+          if (!col) continue;
+          ctx.fillStyle = col;
+          ctx.fillRect(x + c * px, y + r * px, px, px);
+        }
+      }
     }
 
     const SPRITE_MATRICES = {
@@ -1889,6 +2208,49 @@
         };
       });
 
+      // Exact Victary Island (index 26) NPC & Volleyball player models
+      const v26Palettes = {
+        v26_uncle: {
+          hair: '#e2e8f0', skin: '#f1c27d', shirt: '#ffffff', pants: '#475569', shoes: '#1e293b', bag: '#94a3b8', bagDark: '#64748b'
+        },
+        v26_student: {
+          hair: '#3b2f2f', skin: '#ffddb3', shirt: '#f8fafc', pants: '#1d4ed8', shoes: '#1e293b', bag: '#facc15', bagDark: '#ca8a04'
+        },
+        v26_auntie: {
+          hair: '#475569', skin: '#f5cba7', shirt: '#db2777', pants: '#1e293b', shoes: '#7e22ce', bag: '#f97316', bagDark: '#c2410c'
+        },
+        v26_mtrStaff: {
+          hair: '#1e293b', skin: '#ffddb3', shirt: '#facc15', pants: '#1e3a8a', shoes: '#090d16', bag: '#ef4444', bagDark: '#991b1b'
+        },
+        v26_officeMan: {
+          hair: '#0f172a', skin: '#f1c27d', shirt: '#e0f2fe', pants: '#1e293b', shoes: '#090d16', bag: '#78350f', bagDark: '#451a03'
+        },
+        v26_officeLady: {
+          hair: '#451a03', skin: '#ffddb3', shirt: '#f472b6', pants: '#334155', shoes: '#be185d', bag: '#fde047', bagDark: '#ca8a04'
+        },
+        v26_schoolBoy: {
+          hair: '#1e293b', skin: '#ffddb3', shirt: '#ffffff', pants: '#334155', shoes: '#090d16', bag: '#16a34a', bagDark: '#14532d'
+        }
+      };
+
+      Object.keys(v26Palettes).forEach(key => {
+        const pal = v26Palettes[key];
+        SPRITES[key] = {
+          left1: buildV26HumanSprite(pal, 'left', 1, 3),
+          left2: buildV26HumanSprite(pal, 'left', 2, 3),
+          right1: buildV26HumanSprite(pal, 'right', 1, 3),
+          right2: buildV26HumanSprite(pal, 'right', 2, 3)
+        };
+      });
+
+      // Exact Victary Island orange cat "波子"
+      SPRITES.v26_cat = {
+        left1: buildV26CatSprite(false, 0, 3),
+        left2: buildV26CatSprite(false, 1, 3),
+        right1: buildV26CatSprite(true, 0, 3),
+        right2: buildV26CatSprite(true, 1, 3)
+      };
+
       SPRITES.buff_eggtart = bakeSprite(SPRITE_MATRICES.buff_eggtart, 3, false);
       SPRITES.buff_vest = bakeSprite(SPRITE_MATRICES.buff_vest, 3, false);
       SPRITES.buff_airpods = bakeSprite(SPRITE_MATRICES.buff_airpods, 3, false);
@@ -1991,6 +2353,21 @@
         lineColor: '#5eb7e8',
         desc: '東鐵觀塘大直路轉線大堂！廣闊直路擠滿趕車學生、拖喼掃貨客與擔遮途人，考驗極限高速穿梭！',
         mechanic: 'default'
+      },
+      tigerhill: {
+        id: 'tigerhill',
+        name: '老虎山站',
+        enName: 'Tiger Hill',
+        subtitle: '維他利島聯動大堂',
+        wallPrimary: '#b91c1c',
+        wallSecondary: '#dc2626',
+        wallTrim: '#facc15',
+        floorColor: '#cbd5e1',
+        floorReflect: '#fef3c7',
+        lineDirection: '往維他利島 Victary Island (老虎山 Tiger Hill)  ▶▶',
+        lineColor: '#facc15',
+        desc: '維他利島地標地鐵站！站內掛滿茶餐廳、雪糕車、碼頭與龍灣唐樓建築廣告，更有單車人、排球人及島民街坊穿梭月台！',
+        mechanic: 'tigerhill'
       }
     };
 
@@ -2047,6 +2424,89 @@
       { bg: '#064e3b', border: '#34d399', title: '維他檸檬茶', sub: '澀得起 就係我' },
       { bg: '#78350f', border: '#fbbf24', title: '九龍城豪華餅店', sub: '新鮮出爐酥皮蛋撻' },
       { bg: '#4c1d95', border: '#c084fc', title: '早鳥優惠 75折', sub: '朝早7:15-8:15出閘' }
+    ];
+
+    // Building shopfront advertisements ported from Victary Island (index 26.html)
+    const TIGER_HILL_BUILDING_ADS = [
+      {
+        awningMain: '#115e59', awningDark: '#042f2e',
+        bg: '#064e3b', border: '#fbbf24', titleColor: '#fef08a',
+        title: '☕ 維多利茶餐廳', sub: '龍灣唐樓 · 絲襪奶茶菠蘿油',
+        graffiti: 'mtr_small'
+      },
+      {
+        awningMain: '#991b1b', awningDark: '#450a0a',
+        bg: '#7f1d1d', border: '#ffd43b', titleColor: '#fef08a',
+        title: '🍜 龍灣米線風雲', sub: '龍灣商店街 · 招牌酸辣米線',
+        graffiti: 'pool'
+      },
+      {
+        awningMain: '#dc2626', awningDark: '#7f1d1d',
+        bg: '#1d4ed8', border: '#ffffff', titleColor: '#ffd43b',
+        title: '🍦 富豪雪糕車', sub: '南大道分站 · 香滑軟雪糕',
+        graffiti: 'mtr_small'
+      },
+      {
+        awningMain: '#0d9488', awningDark: '#115e59',
+        bg: '#0f172a', border: '#ffd43b', titleColor: '#ffd43b',
+        title: '⛴ 維多利碼頭 · 往長洲', sub: '乘天星渡輪 · 搶包山大作戰',
+        graffiti: 'pool'
+      },
+      {
+        awningMain: '#0284c7', awningDark: '#0369a1',
+        bg: '#0c4a6e', border: '#38bdf8', titleColor: '#fef08a',
+        title: '🏊 多利游泳池', sub: 'Dolly Swimming Pool · 水球賽',
+        graffiti: 'pool'
+      },
+      {
+        awningMain: '#15803d', awningDark: '#052e16',
+        bg: '#ea580c', border: '#ffffff', titleColor: '#fef08a',
+        title: '🏐 維多利海濱排球場', sub: '海濱排球賽 · 熱血殺球對決',
+        graffiti: 'mtr_small'
+      },
+      {
+        awningMain: '#b45309', awningDark: '#451a03',
+        bg: '#451a03', border: '#ffd43b', titleColor: '#fef08a',
+        title: '🥖 皇后餅店西餅', sub: '新鮮出爐 · 酥皮蛋撻西餅',
+        graffiti: 'mtr_small'
+      },
+      {
+        awningMain: '#be123c', awningDark: '#4c0519',
+        bg: '#4c0519', border: '#ffd43b', titleColor: '#fef08a',
+        title: '🍲 廟街煲仔飯', sub: '炭火臘味煲仔飯 · 鑊氣十足',
+        graffiti: 'pool'
+      },
+      {
+        awningMain: '#1e3a8a', awningDark: '#0f172a',
+        bg: '#1e293b', border: '#ffd43b', titleColor: '#fef08a',
+        title: '🏮 龍灣士多辦館', sub: '維他利島 · 懷舊零食汽水',
+        graffiti: 'mtr_small'
+      },
+      {
+        awningMain: '#15803d', awningDark: '#052e16',
+        bg: '#090d16', border: '#ffd43b', titleColor: '#ffd43b',
+        title: '✍️ 維多利公園遊客簽名板', sub: '公園東北角 · 留低到此一遊',
+        graffiti: 'pool'
+      }
+    ];
+
+    // Cyclist profiles from index(26).html
+    const V26_CYCLIST_PROFILES = [
+      { name: '單車手阿豪', frameColor: '#e03131', helmetColor: '#facc15', shout: '🔔 鈴鈴！借借唔該！' },
+      { name: '單車少女 Kay', frameColor: '#0d9488', helmetColor: '#f472b6', shout: '🚴 單車徑借過！' },
+      { name: '外賣單車仔細B', frameColor: '#2563eb', helmetColor: '#22c55e', shout: '🛵 外賣送到！讓一讓！' }
+    ];
+
+    // Ordinary island residents from index(26).html
+    const V26_RESIDENT_PROFILES = [
+      { spriteKey: 'v26_uncle', name: '晨運陳伯', vx: -46, shout: '👴 公園簽名板簽咗未？' },
+      { spriteKey: 'v26_student', name: '學生妹阿晴', vx: -68, shout: '🎒 差啲趕唔切尾班車！' },
+      { spriteKey: 'v26_auntie', name: '買餸芬姐', vx: -52, shout: '🛍️ 買完餸返龍灣唐樓！' },
+      { spriteKey: 'v26_mtrStaff', name: '港鐵站務員阿明', vx: -48, shout: '🦺 請企喺黃線後面！' },
+      { spriteKey: 'v26_officeMan', name: '趕返工陳生', vx: -86, shout: '💼 仲有30秒就遲到啦！' },
+      { spriteKey: 'v26_officeLady', name: '白領小姐 Coco', vx: -74, shout: '👜 嘟！八達通餘額充足！' },
+      { spriteKey: 'v26_schoolBoy', name: '中學生阿軒', vx: -66, shout: '🎓 書包好重呀！' },
+      { spriteKey: 'v26_cat', name: '橘貓「波子」', vx: -56, shout: '🐈 喵嗚～' }
     ];
 
     // ============================================================================
@@ -2233,6 +2693,11 @@
       } else if (st.mechanic === 'pillars') {
         spawnStationObstacle('pillar', 440, 1);
         spawnStationObstacle('pillar', 740, 3);
+      } else if (st.mechanic === 'tigerhill') {
+        // Immediately showcase Tiger Hill's 3 signature character types on entry
+        spawnSingleNpc('v26_pedestrian', 430, LANES[1]);
+        spawnSingleNpc('v26_volleyball', 575, LANES[3]);
+        spawnSingleNpc('v26_cyclist', 720, LANES[2]);
       }
     }
 
@@ -2348,6 +2813,91 @@
     function spawnSingleNpc(forcedType = null, forcedX = null, forcedY = null) {
       if (isNearFinishTrain() && forcedType !== 'uncle') return;
 
+      const laneY = forcedY !== null ? forcedY : LANES[Math.floor(Math.random() * LANES.length)];
+      const spawnX = forcedX !== null ? forcedX : W + 55;
+
+      // Dedicated Victary Island (index 26) cast for Tiger Hill Station!
+      if (world.station.id === 'tigerhill' || (forcedType && forcedType.startsWith('v26_'))) {
+        let vType = forcedType;
+        if (!vType || !vType.startsWith('v26_')) {
+          const r = Math.random();
+          if (r < 0.30) vType = 'v26_cyclist';
+          else if (r < 0.60) vType = 'v26_volleyball';
+          else vType = 'v26_pedestrian';
+        }
+
+        if (vType === 'v26_cyclist') {
+          const prof = V26_CYCLIST_PROFILES[Math.floor(Math.random() * V26_CYCLIST_PROFILES.length)];
+          world.npcs.push({
+            type: 'v26_cyclist',
+            cyclistProfile: prof,
+            x: spawnX + 10,
+            y: laneY,
+            vx: -(132 + Math.random() * 28) * world.diff.speedMult,
+            vy: 0,
+            w: 44,
+            h: 26,
+            dir: -1,
+            bellRang: false,
+            animTimer: Math.random() * 2,
+            counted: false,
+            bowled: false,
+            bvx: 0,
+            bvy: 0
+          });
+          return;
+        }
+
+        if (vType === 'v26_volleyball') {
+          const isGirl = Math.random() < 0.45;
+          world.npcs.push({
+            type: 'v26_volleyball',
+            spriteKey: isGirl ? 'v26_student' : 'v26_schoolBoy',
+            playerName: isGirl ? '排球妹小琳' : (Math.random() < 0.5 ? '細佬樂樂' : '波牛阿傑'),
+            x: spawnX,
+            y: laneY,
+            vx: -(54 + Math.random() * 18) * world.diff.speedMult,
+            vy: (Math.random() < 0.5 ? -1 : 1) * 24,
+            w: 46,
+            h: 28,
+            dir: -1,
+            ballTimer: Math.random() * Math.PI,
+            ballZ: 24,
+            ballOffsetX: -24,
+            isSpike: false,
+            shouted: false,
+            animTimer: Math.random() * 2,
+            counted: false,
+            bowled: false,
+            bvx: 0,
+            bvy: 0
+          });
+          return;
+        }
+
+        // Ordinary island resident / pedestrian from index(26).html
+        const res = V26_RESIDENT_PROFILES[Math.floor(Math.random() * V26_RESIDENT_PROFILES.length)];
+        world.npcs.push({
+          type: 'v26_pedestrian',
+          spriteKey: res.spriteKey,
+          residentProfile: res,
+          x: spawnX,
+          y: laneY,
+          vx: res.vx * world.diff.speedMult,
+          vy: res.spriteKey === 'v26_cat' ? (Math.random() < 0.5 ? -22 : 22) : 0,
+          w: 34,
+          h: 26,
+          dir: -1,
+          shouted: false,
+          animTimer: Math.random() * 2,
+          counted: false,
+          bowled: false,
+          bvx: 0,
+          bvy: 0
+        });
+        return;
+      }
+
       const types = [
         'coffee',
         'granny',
@@ -2380,7 +2930,6 @@
       }
 
       if (type === 'uncle') {
-        const laneY = forcedY !== null ? forcedY : LANES[Math.floor(Math.random() * LANES.length)];
         world.npcs.push({
           type: 'uncle',
           x: -55,
@@ -2426,9 +2975,6 @@
         }
         return;
       }
-
-      const laneY = forcedY !== null ? forcedY : LANES[Math.floor(Math.random() * LANES.length)];
-      const spawnX = forcedX !== null ? forcedX : W + 55;
 
       let vy = 0;
       if (world.station.mechanic === 'escalators' && Math.random() < 0.45) {
@@ -2726,7 +3272,7 @@
           audio.playJump();
         }
         spawnParticles(p.x, p.y, '#e2e8f0', 6, 80);
-      }  
+      }
       if (p.z > 0 || p.vz > 0) {
         p.z += p.vz * dt;
         p.vz -= p.gravity * dt;
@@ -2910,7 +3456,33 @@
           }
         }
 
-        if (npc.type === 'suit_commuter') {
+        if (npc.type === 'v26_cyclist') {
+          if (!npc.bellRang && npc.x < W - 40 && npc.x > p.x + 80) {
+            npc.bellRang = true;
+            if (Math.random() < 0.55) {
+              audio.playBikeBell();
+              addPopup(npc.x, npc.y - 44, npc.cyclistProfile.shout, '#fef08a', '#991b1b', 0.95);
+            }
+          }
+        } else if (npc.type === 'v26_volleyball') {
+          npc.ballTimer += dt * 5.2;
+          const arc = Math.sin(npc.ballTimer);
+          npc.ballZ = 14 + Math.abs(arc) * 36;
+          npc.isSpike = arc < -0.55;
+          npc.ballOffsetX = -22 + Math.cos(npc.ballTimer * 0.5) * 8;
+          if (!npc.shouted && npc.x < W - 70 && npc.x > p.x + 60) {
+            npc.shouted = true;
+            if (Math.random() < 0.55) {
+              const vbLines = ['🏐 好波！接住呀！', '💥 睇我殺波！', '🏐 唔會跌地！'];
+              addPopup(npc.x, npc.y - 44, vbLines[Math.floor(Math.random() * vbLines.length)], '#38bdf8', '#090d16', 0.95);
+            }
+          }
+        } else if (npc.type === 'v26_pedestrian') {
+          if (!npc.shouted && npc.x < W - 65 && npc.x > p.x + 60 && Math.random() < 0.28) {
+            npc.shouted = true;
+            addPopup(npc.x, npc.y - 40, npc.residentProfile.shout, '#fef9c3', '#1e293b', 0.95);
+          }
+        } else if (npc.type === 'suit_commuter') {
           npc.laneSwitchTimer -= dt;
           if (npc.laneSwitchTimer <= 0) {
             npc.laneSwitchTimer = 1.0 + Math.random() * 1.0;
@@ -3046,54 +3618,143 @@
       ctx.fillStyle = st.wallTrim;
       ctx.fillRect(-60, CORRIDOR_TOP - 8, corridorRightEdge + 60, 8);
 
-      const propSpacing = 380;
-      const firstProp = Math.floor(sx / propSpacing) * propSpacing;
-      for (let wx = firstProp; wx < sx + W + propSpacing; wx += propSpacing) {
-        const screenX = wx - sx;
-        const propIdx = Math.abs(Math.floor(wx / propSpacing));
+      if (st.id === 'tigerhill') {
+        // Victary Island (index 26) Building Shopfront Advertisements & Graffiti Wall!
+        const propSpacing = 440;
+        const firstProp = Math.floor(sx / propSpacing) * propSpacing;
+        for (let wx = firstProp; wx < sx + W + propSpacing; wx += propSpacing) {
+          const screenX = wx - sx;
+          const propIdx = Math.abs(Math.floor(wx / propSpacing));
 
-        if (screenX + 174 < trainX - 10) {
-          const ad = RETRO_AD_BOXES[propIdx % RETRO_AD_BOXES.length];
-          ctx.fillStyle = '#000000';
-          ctx.fillRect(screenX + 38, 52, 134, 72);
-          ctx.fillStyle = ad.bg;
-          ctx.fillRect(screenX + 41, 55, 128, 66);
-          ctx.strokeStyle = ad.border;
-          ctx.lineWidth = 2;
-          ctx.strokeRect(screenX + 42, 56, 126, 64);
+          // 1. Building Shopfront Advertisement Box (with corrugated awning from index 26)
+          if (screenX + 190 < trainX - 10) {
+            const ad = TIGER_HILL_BUILDING_ADS[propIdx % TIGER_HILL_BUILDING_ADS.length];
+            const bx = screenX + 20;
+            const by = 46;
+            const bw = 166;
+            const bh = 86;
 
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 13px "Noto Sans TC", sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(ad.title, screenX + 105, 82);
-          ctx.fillStyle = '#fde047';
-          ctx.font = 'bold 10px "Noto Sans TC", sans-serif';
-          ctx.fillText(ad.sub, screenX + 105, 104);
+            // Dark cabinet frame
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(bx - 3, by - 3, bw + 6, bh + 6);
+
+            // Shopfront background
+            ctx.fillStyle = ad.bg;
+            ctx.fillRect(bx, by, bw, bh);
+
+            // Corrugated awning from index(26).html
+            drawV26CorrugatedAwning(ctx, bx - 2, by, bw + 4, 13, ad.awningMain, ad.awningDark);
+
+            // Neon / Gold Signboard
+            ctx.fillStyle = 'rgba(9, 13, 22, 0.52)';
+            ctx.fillRect(bx + 8, by + 18, bw - 16, 44);
+            ctx.strokeStyle = ad.border;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(bx + 8, by + 18, bw - 16, 44);
+
+            ctx.fillStyle = ad.titleColor;
+            ctx.font = '900 13px "Noto Sans TC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(ad.title, bx + bw / 2, by + 37);
+
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = 'bold 10px "Noto Sans TC", sans-serif';
+            ctx.fillText(ad.sub, bx + bw / 2, by + 54);
+
+            // Bottom Victary Island tag strip
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(bx + 12, by + 67, bw - 24, 14);
+            ctx.fillStyle = '#fde047';
+            ctx.font = 'bold 9px "Noto Sans TC", sans-serif';
+            ctx.fillText('🏝️ 維他利島 VICTARY ISLAND 廣告', bx + bw / 2, by + 77);
+          }
+
+          // 2. Pixel Graffiti Mural from index(26).html
+          const grafX = screenX + 204;
+          if (grafX + 115 < trainX - 10) {
+            const gType = propIdx % 2 === 0 ? 'pool' : 'mtr_small';
+            drawV26PixelGraffiti(ctx, grafX, gType === 'pool' ? 98 : 88, gType);
+          }
+
+          // 3. Authentic Tiger Hill Station Signboard + Roundel from index(26).html
+          const signX = screenX + 356;
+          if (signX + 64 < trainX - 10) {
+            ctx.fillStyle = '#001f3f';
+            ctx.beginPath();
+            ctx.arc(signX, 82, 26, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 11px "Noto Sans TC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('老虎山站', signX, 81);
+            ctx.font = '6px "Press Start 2P", monospace';
+            ctx.fillText('TIGER HILL', signX, 94);
+
+            // LED indicator box from index(26).html ("往金鐘 1分鐘")
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(signX - 44, 113, 88, 19);
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(signX - 44, 113, 88, 19);
+            ctx.fillStyle = '#facc15';
+            ctx.font = '900 10px "Noto Sans TC", sans-serif';
+            ctx.fillText('往金鐘 1分鐘', signX, 126);
+          }
         }
+      } else {
+        const propSpacing = 380;
+        const firstProp = Math.floor(sx / propSpacing) * propSpacing;
+        for (let wx = firstProp; wx < sx + W + propSpacing; wx += propSpacing) {
+          const screenX = wx - sx;
+          const propIdx = Math.abs(Math.floor(wx / propSpacing));
 
-        const signX = screenX + 255;
-        if (signX + 32 < trainX - 10) {
-          ctx.fillStyle = '#001f3f';
-          ctx.beginPath();
-          ctx.arc(signX, 88, 28, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.lineWidth = 3;
-          ctx.strokeStyle = '#ffffff';
-          ctx.stroke();
+          if (screenX + 174 < trainX - 10) {
+            const ad = RETRO_AD_BOXES[propIdx % RETRO_AD_BOXES.length];
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(screenX + 38, 52, 134, 72);
+            ctx.fillStyle = ad.bg;
+            ctx.fillRect(screenX + 41, 55, 128, 66);
+            ctx.strokeStyle = ad.border;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(screenX + 42, 56, 126, 64);
 
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 12px "Noto Sans TC", sans-serif';
-          ctx.fillText(st.name, signX, 87);
-          ctx.font = '7px "Press Start 2P", monospace';
-          ctx.fillText(st.enName.toUpperCase(), signX, 100);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 13px "Noto Sans TC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(ad.title, screenX + 105, 82);
+            ctx.fillStyle = '#fde047';
+            ctx.font = 'bold 10px "Noto Sans TC", sans-serif';
+            ctx.fillText(ad.sub, screenX + 105, 104);
+          }
+
+          const signX = screenX + 255;
+          if (signX + 32 < trainX - 10) {
+            ctx.fillStyle = '#001f3f';
+            ctx.beginPath();
+            ctx.arc(signX, 88, 28, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px "Noto Sans TC", sans-serif';
+            ctx.fillText(st.name, signX, 87);
+            ctx.font = '7px "Press Start 2P", monospace';
+            ctx.fillText(st.enName.toUpperCase(), signX, 100);
+          }
         }
       }
 
       ctx.fillStyle = '#0f172a';
-      ctx.fillRect(W / 2 - 155, 10, 310, 26);
+      ctx.fillRect(W / 2 - 195, 10, 390, 26);
       ctx.strokeStyle = st.lineColor;
       ctx.lineWidth = 2;
-      ctx.strokeRect(W / 2 - 155, 10, 310, 26);
+      ctx.strokeRect(W / 2 - 195, 10, 390, 26);
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 12px "Noto Sans TC", sans-serif';
       ctx.textAlign = 'center';
@@ -3396,6 +4057,46 @@
               return;
             }
 
+            // 1. Victary Island Cyclist model (exact drawPixelCyclist from index 26)
+            if (npc.type === 'v26_cyclist') {
+              const prof = npc.cyclistProfile || V26_CYCLIST_PROFILES[0];
+              drawV26PixelCyclist(
+                ctx,
+                npc.x,
+                npc.y,
+                npc.dir === 1 ? 'right' : 'left',
+                prof.frameColor,
+                prof.helmetColor,
+                npc.animTimer * 140
+              );
+              return;
+            }
+
+            // 2. Victary Island Volleyball Player + Bouncing 16-bit Volleyball (exact models from index 26)
+            if (npc.type === 'v26_volleyball') {
+              ctx.fillStyle = 'rgba(0,0,0,0.38)';
+              ctx.beginPath();
+              ctx.ellipse(npc.x, npc.y + 3, 15, 6, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              const frame = Math.floor(npc.animTimer) % 2 === 0 ? '1' : '2';
+              const side = npc.dir === 1 ? 'right' : 'left';
+              const spr = SPRITES[npc.spriteKey][side + frame];
+              const jumpOffset = npc.isSpike ? 8 : 0;
+              ctx.drawImage(spr, npc.x - spr.width / 2, npc.y - spr.height + 4 - jumpOffset);
+
+              // Bouncing 16-bit volleyball in front of player
+              drawV26Volleyball(
+                ctx,
+                npc.x + (npc.ballOffsetX || -22),
+                npc.y + 2,
+                npc.ballZ || 22,
+                Boolean(npc.isSpike)
+              );
+              return;
+            }
+
+            // 3. Standard & Victary Island Ordinary Pedestrians (including 波子)
             const hopZ = npc.hopZ || 0;
             const shadowScale = Math.max(0.65, 1 - hopZ / 60);
             ctx.fillStyle = 'rgba(0,0,0,0.38)';
