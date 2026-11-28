@@ -1509,7 +1509,7 @@
       let ctx = null;
       let enabled = true;
 
-      function ensureCtx() {
+      function getContext() {
         if (!enabled) return null;
         try {
           if (!ctx) {
@@ -1517,39 +1517,68 @@
             if (!AudioCtx) return null;
             ctx = new AudioCtx();
           }
-          if (ctx && ctx.state === 'suspended') {
-            ctx.resume();
-          }
+          return ctx;
         } catch (err) {
           return null;
         }
-        return ctx;
+      }
+
+      async function unlock() {
+        const audio = getContext();
+        if (!audio) return null;
+        try {
+          if (audio.state === 'suspended' || audio.state === 'interrupted') {
+            await audio.resume();
+          }
+          if (audio.state === 'running') {
+            const buf = audio.createBuffer(1, 1, 22050);
+            const src = audio.createBufferSource();
+            src.buffer = buf;
+            src.connect(audio.destination);
+            src.start(0);
+          }
+        } catch (err) {
+          // 忽略解鎖例外
+        }
+        return audio;
       }
 
       function playTone(freq, duration, type = 'square', gainVal = 0.05, delay = 0) {
-        const audio = ensureCtx();
+        const audio = getContext();
         if (!audio) return;
-        try {
-          const now = audio.currentTime + delay;
-          const osc = audio.createOscillator();
-          const gain = audio.createGain();
-          osc.type = type;
-          osc.frequency.setValueAtTime(freq, now);
-          gain.gain.setValueAtTime(gainVal, now);
-          gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-          osc.connect(gain);
-          gain.connect(audio.destination);
-          osc.start(now);
-          osc.stop(now + duration);
-        } catch (err) {
-          // 忽略瀏覽器自動播放限制錯誤
+
+        const schedule = () => {
+          try {
+            const now = audio.currentTime + delay;
+            const osc = audio.createOscillator();
+            const gain = audio.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now);
+            gain.gain.setValueAtTime(gainVal, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+            osc.connect(gain);
+            gain.connect(audio.destination);
+            osc.start(now);
+            osc.stop(now + duration + 0.02);
+          } catch (err) {
+            // 忽略排程錯誤
+          }
+        };
+
+        if (audio.state === 'running') {
+          schedule();
+        } else {
+          audio.resume().then(schedule).catch(() => {});
         }
       }
 
       return {
+        unlock,
         toggle() {
           enabled = !enabled;
-          if (enabled) this.blip();
+          if (enabled) {
+            unlock().then(() => this.blip());
+          }
           return enabled;
         },
         step() {
@@ -1708,16 +1737,20 @@
             if (!AudioCtx) return null;
             ctx = new AudioCtx();
             masterGain = ctx.createGain();
-            masterGain.gain.setValueAtTime(0.16, ctx.currentTime);
+            masterGain.gain.setValueAtTime(0.18, ctx.currentTime);
 
             const filter = ctx.createBiquadFilter();
             filter.type = 'lowpass';
             filter.frequency.setValueAtTime(1650, ctx.currentTime);
             masterGain.connect(filter);
             filter.connect(ctx.destination);
+
+            ctx.onstatechange = () => {
+              updateLabel();
+            };
           }
-          if (ctx.state === 'suspended') {
-            ctx.resume();
+          if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+            ctx.resume().then(updateLabel).catch(() => {});
           }
           return ctx;
         } catch (err) {
@@ -1746,7 +1779,11 @@
       function tick() {
         if (!enabled || !isPlaying) return;
         const audio = ensureAudio();
-        if (!audio || audio.state !== 'running') return;
+        if (!audio) return;
+        if (audio.state !== 'running') {
+          audio.resume().catch(() => {});
+          return;
+        }
 
         const tr = playlist[trackIdx];
         const i = stepIdx % 32;
@@ -5161,7 +5198,14 @@
       showToast(showVirtualControls ? '🎮 已顯示虛擬搖桿與互動制' : '🙈 已隱藏虛擬搖桿與互動制（可按 [H] 恢復）');
     }
 
-    window.addEventListener('pointerdown', () => ChillBGM.unlockAndStart(), { once: true });
+    // 手機與桌面互動時持續解鎖音效與背景音樂
+    function unlockAllAudio() {
+      SoundFX.unlock();
+      ChillBGM.unlockAndStart();
+    }
+    window.addEventListener('touchstart', unlockAllAudio, { passive: true });
+    window.addEventListener('pointerdown', unlockAllAudio, { passive: true });
+    window.addEventListener('click', unlockAllAudio, { passive: true });
 
     window.addEventListener('keydown', (e) => {
       ChillBGM.unlockAndStart();
