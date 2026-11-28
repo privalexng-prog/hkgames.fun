@@ -250,22 +250,32 @@ async function handleBunSubmitScore(request, env) {
 // ============================================================================
 // 維他利島公園：遊客簽名板（到此一遊）全球雲端 API（共用 LEADERBOARD_KV）
 // ============================================================================
+// ============================================================================
+// 維他利島公園：遊客簽名板（到此一遊）全球雲端 API（支援 SIGNATURES_KV / LEADERBOARD_KV）
+// ============================================================================
 const SIGNATURES_KV_KEY = 'victary_island:signatures';
+const SIG_ALLOWED_COLORS = ['#fef08a', '#fecdd3', '#bae6fd', '#bbf7d0', '#fffbeb'];
 
 async function handleSignatures(request, env) {
   const corsHeaders = getBunCorsHeaders();
   if (request.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  if (!env.LEADERBOARD_KV) {
-    return new Response(JSON.stringify({ ok: false, error: '尚未綁定 LEADERBOARD_KV' }), { status: 500, headers: corsHeaders });
+
+  const kv = env.SIGNATURES_KV || env.LEADERBOARD_KV;
+  if (!kv) {
+    return new Response(JSON.stringify({ ok: false, error: '尚未綁定 SIGNATURES_KV 或 LEADERBOARD_KV' }), { status: 500, headers: corsHeaders });
   }
 
   // 讀取所有雲端簽名
   if (request.method === 'GET') {
-    const raw = await env.LEADERBOARD_KV.get(SIGNATURES_KV_KEY);
-    const signatures = raw ? JSON.parse(raw) : [];
-    return new Response(JSON.stringify({ ok: true, signatures }), { headers: corsHeaders });
+    try {
+      const raw = await kv.get(SIGNATURES_KV_KEY);
+      const signatures = raw ? JSON.parse(raw) : [];
+      return new Response(JSON.stringify({ ok: true, signatures }), { headers: corsHeaders });
+    } catch (err) {
+      return new Response(JSON.stringify({ ok: false, error: err.message || '讀取失敗' }), { status: 500, headers: corsHeaders });
+    }
   }
 
   // 新增遊客簽名到雲端
@@ -275,13 +285,13 @@ async function handleSignatures(request, env) {
       const name = String(body.name || '').trim().slice(0, 16);
       const message = String(body.message || '').trim().slice(0, 60);
       const badge = String(body.badge || '🏝️ 到此一遊').trim().slice(0, 16) || '🏝️ 到此一遊';
-      const color = String(body.color || '#fef08a').trim().slice(0, 20) || '#fef08a';
+      const color = SIG_ALLOWED_COLORS.includes(body.color) ? body.color : '#fef08a';
 
       if (!name || !message) {
         return new Response(JSON.stringify({ ok: false, error: '請填寫暱稱同留言內容' }), { status: 400, headers: corsHeaders });
       }
 
-      const raw = await env.LEADERBOARD_KV.get(SIGNATURES_KV_KEY);
+      const raw = await kv.get(SIGNATURES_KV_KEY);
       let signatures = raw ? JSON.parse(raw) : [];
 
       signatures.unshift({
@@ -293,13 +303,13 @@ async function handleSignatures(request, env) {
         date: getHKDateKey()
       });
 
-      // 最多保留最新 80 張簽名便條
-      signatures = signatures.slice(0, 80);
-      await env.LEADERBOARD_KV.put(SIGNATURES_KV_KEY, JSON.stringify(signatures));
+      // 最多保留最新 100 張簽名便條
+      signatures = signatures.slice(0, 100);
+      await kv.put(SIGNATURES_KV_KEY, JSON.stringify(signatures));
 
       return new Response(JSON.stringify({ ok: true, signatures }), { headers: corsHeaders });
     } catch (err) {
-      return new Response(JSON.stringify({ ok: false, error: '資料格式錯誤' }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ ok: false, error: err.message || '資料格式錯誤' }), { status: 400, headers: corsHeaders });
     }
   }
 
