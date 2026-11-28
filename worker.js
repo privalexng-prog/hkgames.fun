@@ -248,6 +248,65 @@ async function handleBunSubmitScore(request, env) {
 }
 
 // ============================================================================
+// 維他利島公園：遊客簽名板（到此一遊）全球雲端 API（共用 LEADERBOARD_KV）
+// ============================================================================
+const SIGNATURES_KV_KEY = 'victary_island:signatures';
+
+async function handleSignatures(request, env) {
+  const corsHeaders = getBunCorsHeaders();
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+  if (!env.LEADERBOARD_KV) {
+    return new Response(JSON.stringify({ ok: false, error: '尚未綁定 LEADERBOARD_KV' }), { status: 500, headers: corsHeaders });
+  }
+
+  // 讀取所有雲端簽名
+  if (request.method === 'GET') {
+    const raw = await env.LEADERBOARD_KV.get(SIGNATURES_KV_KEY);
+    const signatures = raw ? JSON.parse(raw) : [];
+    return new Response(JSON.stringify({ ok: true, signatures }), { headers: corsHeaders });
+  }
+
+  // 新增遊客簽名到雲端
+  if (request.method === 'POST') {
+    try {
+      const body = await request.json();
+      const name = String(body.name || '').trim().slice(0, 15);
+      const message = String(body.message || '').trim().slice(0, 80);
+      const badge = String(body.badge || '🏝️').trim().slice(0, 4) || '🏝️';
+      const color = String(body.color || '#fef08a').trim().slice(0, 20) || '#fef08a';
+
+      if (!name || !message) {
+        return new Response(JSON.stringify({ ok: false, error: '請填寫暱稱同留言內容' }), { status: 400, headers: corsHeaders });
+      }
+
+      const raw = await env.LEADERBOARD_KV.get(SIGNATURES_KV_KEY);
+      let signatures = raw ? JSON.parse(raw) : [];
+
+      signatures.unshift({
+        id: Date.now(),
+        name,
+        badge,
+        color,
+        message,
+        date: getHKDateKey()
+      });
+
+      // 最多保留最新 80 張簽名便條
+      signatures = signatures.slice(0, 80);
+      await env.LEADERBOARD_KV.put(SIGNATURES_KV_KEY, JSON.stringify(signatures));
+
+      return new Response(JSON.stringify({ ok: true, signatures }), { headers: corsHeaders });
+    } catch (err) {
+      return new Response(JSON.stringify({ ok: false, error: '資料格式錯誤' }), { status: 400, headers: corsHeaders });
+    }
+  }
+
+  return new Response(JSON.stringify({ ok: false, error: 'Method Not Allowed' }), { status: 405, headers: corsHeaders });
+}
+
+// ============================================================================
 // 水球大亂鬥 1v1 連線路由（同時支援 /ws/room/XXXX 同 /api/waterpolo/ws）
 // ============================================================================
 async function handleWaterPoloWS(request, env, roomCode) {
@@ -288,6 +347,11 @@ export default {
 
     if (url.pathname === '/api/submit-score' || url.pathname === '/api/submit-score/') {
       return handleBunSubmitScore(request, env);
+    }
+
+    // 1c. 維他利島公園：遊客簽名板
+    if (url.pathname === '/api/signatures' || url.pathname === '/api/signatures/') {
+      return handleSignatures(request, env);
     }
 
     // 2. 水球大亂鬥 1v1 WebSocket 連線（/ws/room/7396）
