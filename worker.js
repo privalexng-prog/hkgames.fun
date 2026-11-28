@@ -272,9 +272,9 @@ async function handleSignatures(request, env) {
   if (request.method === 'POST') {
     try {
       const body = await request.json();
-      const name = String(body.name || '').trim().slice(0, 15);
-      const message = String(body.message || '').trim().slice(0, 80);
-      const badge = String(body.badge || '🏝️').trim().slice(0, 4) || '🏝️';
+      const name = String(body.name || '').trim().slice(0, 16);
+      const message = String(body.message || '').trim().slice(0, 60);
+      const badge = String(body.badge || '🏝️ 到此一遊').trim().slice(0, 16) || '🏝️ 到此一遊';
       const color = String(body.color || '#fef08a').trim().slice(0, 20) || '#fef08a';
 
       if (!name || !message) {
