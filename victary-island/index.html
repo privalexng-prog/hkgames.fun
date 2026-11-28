@@ -4749,18 +4749,31 @@
       }
 
       // 從 Cloudflare Worker 讀取全服真實簽名
+      async function parseApiResponse(res) {
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          throw new Error(`API 未啟用 (HTTP ${res.status})，請確認已部署 functions/api/signatures.js`);
+        }
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || `伺服器錯誤 (${res.status})`);
+        }
+        return data;
+      }
+
+      // 從 Cloudflare Pages Function 讀取全服真實簽名
       async function loadFromCloud() {
         isLoading = true;
         renderBoard();
         try {
           const res = await fetch('/api/signatures');
-          const data = await res.json();
-          if (data.ok && Array.isArray(data.signatures)) {
+          const data = await parseApiResponse(res);
+          if (Array.isArray(data.signatures)) {
             entries = data.signatures;
           }
         } catch (err) {
           console.warn('讀取雲端簽名板失敗:', err);
-          showToast('⚠️ 暫時無法連線至雲端簽名板');
+          showToast(`⚠️ ${err.message || '暫時無法連線至雲端簽名板'}`);
         } finally {
           isLoading = false;
           renderBoard();
@@ -4823,10 +4836,7 @@
                   message: rawMsg
                 })
               });
-              const data = await res.json();
-              if (!res.ok || !data.ok) {
-                throw new Error(data.error || '張貼失敗');
-              }
+              const data = await parseApiResponse(res);
 
               entries = data.signatures || entries;
               msgInput.value = '';
